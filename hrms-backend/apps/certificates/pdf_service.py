@@ -71,6 +71,7 @@ def _has_arabic(text: str) -> bool:
 def _html_to_pdf_arabic(html: str, sig_tag: str = None) -> bytes:
     """
     Render an Arabic HTML document to PDF using fpdf2 + arabic-reshaper.
+    Footer is rendered at the bottom of the page.
     """
     import re as _re
     import arabic_reshaper
@@ -80,9 +81,18 @@ def _html_to_pdf_arabic(html: str, sig_tag: str = None) -> bytes:
 
     font_path = r'C:\Windows\Fonts\arabtype.ttf'
 
-    # Extract plain text lines from HTML, stop before footer
+    # Extract footer text
+    footer_match = _re.search(
+        r'<div[^>]*class="footer"[^>]*>(.*?)</div>',
+        html, flags=_re.DOTALL | _re.IGNORECASE
+    )
+    footer_text = ''
+    if footer_match:
+        ft = _re.sub(r'<[^>]+>', '', footer_match.group(1))
+        footer_text = _html_mod.unescape(ft).strip()
+
+    # Extract content (without footer)
     clean = _re.sub(r'<(style|script)[^>]*>.*?</(style|script)>', '', html, flags=_re.DOTALL)
-    # Remove footer div entirely so it never appears in content lines
     clean = _re.sub(r'<div[^>]*class="footer"[^>]*>.*?</div>', '', clean, flags=_re.DOTALL | _re.IGNORECASE)
     clean = _re.sub(r'<(br|p|div|h[1-6]|tr|li)\b[^>]*>', '\n', clean, flags=_re.IGNORECASE)
     clean = _re.sub(r'</(p|div|h[1-6]|tr|li)>', '\n', clean, flags=_re.IGNORECASE)
@@ -99,22 +109,40 @@ def _html_to_pdf_arabic(html: str, sig_tag: str = None) -> bytes:
             sig_img_ext = m.group(1).upper().replace('JPEG', 'JPG')
             sig_img_data = base64.b64decode(m.group(2))
 
-    pdf = FPDF()
+    # Build PDF with footer
+    class DocPDF(FPDF):
+        def __init__(self, footer_txt, font_path):
+            super().__init__()
+            self._footer_txt = footer_txt
+            self._font_path = font_path
+
+        def footer(self):
+            if not self._footer_txt:
+                return
+            self.add_font('ArabicFont', fname=self._font_path)
+            self.set_y(-20)
+            self.set_font('ArabicFont', size=8)
+            self.set_draw_color(180, 180, 180)
+            self.line(15, self.get_y(), self.w - 15, self.get_y())
+            self.ln(2)
+            self.set_text_color(100, 100, 100)
+            self.multi_cell(0, 5, self._footer_txt, align='C')
+            self.set_text_color(0, 0, 0)
+
+    pdf = DocPDF(footer_text, font_path)
+    pdf.set_auto_page_break(auto=True, margin=25)
     pdf.add_page()
     pdf.add_font('ArabicFont', fname=font_path)
     pdf.set_font('ArabicFont', size=12)
     pdf.set_margins(15, 15, 15)
 
-    # Find date line index for inline signature placement
     date_idx = next((i for i, l in enumerate(lines) if 'Fait ' in l or 'fait ' in l), None)
 
     for i, line in enumerate(lines):
         is_date_line = (i == date_idx)
 
         if is_date_line and sig_img_data:
-            # Place signature image left, date text right on same row
             y_before = pdf.get_y()
-            # Left: signature image
             import tempfile, os as _os
             with tempfile.NamedTemporaryFile(suffix='.' + sig_img_ext.lower(), delete=False) as tmp:
                 tmp.write(sig_img_data)
@@ -123,24 +151,19 @@ def _html_to_pdf_arabic(html: str, sig_tag: str = None) -> bytes:
                 pdf.image(tmp_path, x=15, y=y_before, h=15)
             finally:
                 _os.unlink(tmp_path)
-            # Right: date text
             pdf.set_xy(pdf.w / 2, y_before)
             pdf.set_font('ArabicFont', size=11)
-            if _has_arabic(line):
-                line = get_display(arabic_reshaper.reshape(line))
-            pdf.multi_cell(pdf.w / 2 - 15, 8, line, align='R')
+            display_line = get_display(arabic_reshaper.reshape(line)) if _has_arabic(line) else line
+            pdf.multi_cell(pdf.w / 2 - 15, 8, display_line, align='R')
             pdf.set_font('ArabicFont', size=12)
             pdf.ln(2)
             continue
 
         if _has_arabic(line):
-            reshaped = arabic_reshaper.reshape(line)
-            visual = get_display(reshaped)
-            pdf.multi_cell(0, 8, visual, align='R')
+            pdf.multi_cell(0, 8, get_display(arabic_reshaper.reshape(line)), align='R')
         else:
             pdf.multi_cell(0, 8, line, align='L')
 
-    # If no date line found but sig exists, append at bottom
     if sig_img_data and date_idx is None:
         import tempfile, os as _os
         with tempfile.NamedTemporaryFile(suffix='.' + sig_img_ext.lower(), delete=False) as tmp:
@@ -163,6 +186,25 @@ def _html_to_pdf(html: str, sig_tag: str = None) -> bytes:
             pass
     # xhtml2pdf path for French/Latin documents
     from xhtml2pdf import pisa
+    # Fix footer at bottom and ensure single page layout
+    footer_fix = '''
+    <style>
+      @page { size: A4; margin: 2cm 2cm 3cm 2cm; }
+      .footer {
+        position: fixed;
+        bottom: -2cm;
+        left: 0; right: 0;
+        text-align: center;
+        font-size: 8pt;
+        color: #666;
+        border-top: 1px solid #ccc;
+        padding-top: 6px;
+      }
+      .content { min-height: auto; }
+    </style>
+    '''
+    if '</head>' in html:
+        html = html.replace('</head>', footer_fix + '</head>', 1)
     processed = _embed_images(html)
     buf = BytesIO()
     result = pisa.CreatePDF(processed.encode('utf-8'), dest=buf, encoding='utf-8')

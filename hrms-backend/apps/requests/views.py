@@ -67,6 +67,12 @@ def _normalize_document(r):
     """
     is_free = r.template is None
     subject = (r.extra_data or {}).get('subject', '') if is_free else ''
+    attachment_url = ''
+    if r.attachment:
+        try:
+            attachment_url = r.attachment.url
+        except Exception:
+            pass
     return {
         'id': str(r.id),
         'type': 'FREE' if is_free else 'CERTIFICATE',
@@ -78,6 +84,7 @@ def _normalize_document(r):
         'created_at': r.created_at.isoformat(),
         'has_pdf': r.generated_documents.exists(),
         'has_signed_document': bool(r.signed_document),
+        'attachment_url': attachment_url,
         'note': r.message or '',
         'subject': subject,
         'details': {
@@ -417,18 +424,85 @@ class UnifiedReviewView(APIView):
     def _review_mission(self, req_id, action, reason, reviewer):
         """
         Approve or reject a Mission.
-        Approval sets status to APPROVED. Rejection sets it to CANCELLED.
+        On approval: generate the Ordre de Mission PDF and notify the professor.
+        On rejection: set status to CANCELLED.
         """
-        obj = Mission.objects.get(id=req_id)
+        from apps.notifications.services import NotificationService
+        obj = Mission.objects.select_related('employee__user').get(id=req_id)
         if obj.status != 'PLANNED':
             return Response({'detail': 'Cette mission a deja ete traitee.'}, status=http_status.HTTP_400_BAD_REQUEST)
 
         if action == 'approve':
             obj.status = 'APPROVED'
             obj.approved_by = reviewer
+            obj.save()
+
+            # Generate Ordre de Mission PDF and send to professor
+            try:
+                from apps.certificates.models import DocumentTemplate, DocumentRequest
+                from apps.certificates.pdf_service import generate_pdf
+
+                template = DocumentTemplate.objects.filter(
+                    category='ORDRE_MISSION', is_active=True
+                ).first()
+
+                if template and hasattr(obj.employee, 'user'):
+                    prof_user = obj.employee.user
+                    # Create a DocumentRequest for this mission
+                    doc_req = DocumentRequest.objects.create(
+                        requested_by=prof_user,
+                        template=template,
+                        status=DocumentRequest.Status.APPROVED,
+                        reviewed_by=reviewer,
+                        reviewed_at=timezone.now(),
+                        extra_data={
+                            'destination': obj.destination,
+                            'date_depart': str(obj.start_date),
+                            'date_retour': str(obj.end_date),
+                            'objet_mission': obj.title,
+                            'evenement': obj.description or obj.title,
+                            'moyen_transport': '',
+                            'accompagnants': '',
+                            'indice': '',
+                        },
+                        message=f'Ordre de mission généré automatiquement lors de l\'approbation de la mission "{obj.title}".',
+                    )
+                    generate_pdf(doc_req, generated_by=reviewer)
+
+                    NotificationService.create_notification(
+                        recipient=prof_user,
+                        notification_type='DOCUMENT_APPROVED',
+                        title='Ordre de mission approuvé',
+                        message=f'Votre mission "{obj.title}" vers {obj.destination} a été approuvée. L\'ordre de mission est disponible au téléchargement.',
+                        action_url='/requests',
+                        related_object_type='document_request',
+                        related_object_id=str(doc_req.id),
+                    )
+            except Exception:
+                # Notification fallback if PDF generation fails
+                try:
+                    NotificationService.create_notification(
+                        recipient=obj.employee.user,
+                        notification_type='DOCUMENT_APPROVED',
+                        title='Mission approuvée',
+                        message=f'Votre mission "{obj.title}" vers {obj.destination} a été approuvée.',
+                        action_url='/requests',
+                    )
+                except Exception:
+                    pass
         else:
             obj.status = 'CANCELLED'
-        obj.save()
+            obj.save()
+            try:
+                NotificationService.create_notification(
+                    recipient=obj.employee.user,
+                    notification_type='LEAVE_REJECTED',
+                    title='Mission rejetée',
+                    message=f'Votre mission "{obj.title}" vers {obj.destination} a été rejetée. Raison: {reason or "Non spécifiée"}',
+                    action_url='/requests',
+                )
+            except Exception:
+                pass
         return Response({'detail': 'OK', 'status': obj.status})
 
 

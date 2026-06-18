@@ -72,7 +72,7 @@ export default function AllRequestsPage() {
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [rejectModal, setRejectModal] = useState<{ id: string; type: string } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
-  const [noteDrawer, setNoteDrawer] = useState<{ subject: string; note: string; user: string; title: string } | null>(null);
+  const [noteDrawer, setNoteDrawer] = useState<{ subject: string; note: string; user: string; title: string; attachmentUrl?: string } | null>(null);
   const [page, setPage] = useState(1);
   const [downloadingSignedId, setDownloadingSignedId] = useState<string | null>(null);
 
@@ -259,18 +259,35 @@ export default function AllRequestsPage() {
                       {(() => {
                         const subject = r.subject as string;
                         const note = r.note as string;
+                        const attachmentUrl = r.attachment_url as string;
                         const full = [subject, note].filter(Boolean).join(' — ');
-                        if (!full) return <span className="text-gray-300 text-xs">—</span>;
                         return (
-                          <button
-                            onClick={() => setNoteDrawer({ subject, note, user: r.user_name as string, title: r.title as string })}
-                            className="flex items-center gap-1 text-left group w-full"
-                          >
-                            <svg className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                            </svg>
-                            <span className="text-xs text-gray-600 truncate group-hover:text-[#0f172a]">{full}</span>
-                          </button>
+                          <div className="flex flex-col gap-1">
+                            {full ? (
+                              <button
+                                onClick={() => setNoteDrawer({ subject, note, user: r.user_name as string, title: r.title as string, attachmentUrl: attachmentUrl || undefined })}
+                                className="flex items-center gap-1 text-left group w-full"
+                              >
+                                <svg className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                </svg>
+                                <span className="text-xs text-gray-600 truncate group-hover:text-[#0f172a]">{full}</span>
+                              </button>
+                            ) : <span className="text-gray-300 text-xs">—</span>}
+                            {attachmentUrl && (
+                              <a
+                                href={attachmentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                              >
+                                <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                </svg>
+                                Pièce jointe
+                              </a>
+                            )}
+                          </div>
                         );
                       })()}
                     </td>
@@ -385,6 +402,22 @@ export default function AllRequestsPage() {
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Message</p>
                   <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap bg-amber-50 border border-amber-100 rounded-lg p-3">{noteDrawer.note}</p>
+                </div>
+              )}
+              {noteDrawer.attachmentUrl && (
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Pièce jointe</p>
+                  <a
+                    href={noteDrawer.attachmentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-3 py-2 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Télécharger la pièce jointe
+                  </a>
                 </div>
               )}
               {!noteDrawer.subject && !noteDrawer.note && (

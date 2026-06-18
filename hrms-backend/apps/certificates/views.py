@@ -190,6 +190,19 @@ class FreeRequestCreateView(generics.CreateAPIView):
         except Exception:
             pass
 
+    def get_serializer(self, *args, **kwargs):
+        # Exclude attachment from serializer validation — handled manually in perform_create
+        kwargs.setdefault('context', self.get_serializer_context())
+        data = self.request.data.copy() if hasattr(self.request.data, 'copy') else dict(self.request.data)
+        data.pop('attachment', None)
+        data.pop('subject', None)
+        data.pop('message', None)
+        return self.serializer_class(
+            *args,
+            data=data,
+            context=kwargs['context'],
+        )
+
 
 class SubmitSignedDocumentView(APIView):
     """POST /requests/<uuid>/sign/ -- Teacher draws/uploads signature, backend embeds it and regenerates PDF."""
@@ -573,12 +586,53 @@ class MissionApproveView(APIView):
 
     def post(self, request, pk):
         try:
-            mission = Mission.objects.get(pk=pk)
+            mission = Mission.objects.select_related('employee__user').get(pk=pk)
         except Mission.DoesNotExist:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
         mission.status = Mission.Status.APPROVED
         mission.approved_by = request.user
         mission.save()
+
+        # Generate Ordre de Mission PDF and notify professor
+        try:
+            from apps.notifications.services import NotificationService
+            template = DocumentTemplate.objects.filter(
+                category='ORDRE_MISSION', is_active=True
+            ).first()
+            if template and hasattr(mission.employee, 'user'):
+                prof_user = mission.employee.user
+                doc_req = DocumentRequest.objects.create(
+                    requested_by=prof_user,
+                    template=template,
+                    status=DocumentRequest.Status.APPROVED,
+                    reviewed_by=request.user,
+                    reviewed_at=timezone.now(),
+                    extra_data={
+                        'destination': mission.destination,
+                        'date_depart': str(mission.start_date),
+                        'date_retour': str(mission.end_date),
+                        'objet_mission': mission.title,
+                        'evenement': mission.description or mission.title,
+                        'moyen_transport': '',
+                        'accompagnants': '',
+                        'indice': '',
+                    },
+                    message=f'Ordre de mission généré automatiquement lors de l\'approbation.',
+                )
+                generate_pdf(doc_req, generated_by=request.user)
+                NotificationService.create_notification(
+                    recipient=prof_user,
+                    notification_type='DOCUMENT_APPROVED',
+                    title='Ordre de mission approuvé',
+                    message=f'Votre mission "{mission.title}" vers {mission.destination} a été approuvée. L\'ordre de mission est disponible au téléchargement.',
+                    action_url='/requests',
+                    related_object_type='document_request',
+                    related_object_id=str(doc_req.id),
+                )
+        except Exception:
+            pass
+
         return Response(MissionSerializer(mission).data)
 
 
