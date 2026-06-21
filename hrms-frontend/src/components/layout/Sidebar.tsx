@@ -1,3 +1,4 @@
+// Sidebar - role-based navigation menu with dynamic menu items
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ROLE_LABELS } from '../../hooks/usePermissions';
