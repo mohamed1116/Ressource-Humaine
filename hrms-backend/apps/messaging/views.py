@@ -36,6 +36,7 @@ class IsNotStudent(BasePermission):
         return request.user.is_authenticated and request.user.role != 'STUDENT'
 
 
+# Conversation list and create - returns user's conversations, supports search and archive filter
 class ConversationListCreateView(generics.ListCreateAPIView):
     serializer_class   = ConversationSerializer
     permission_classes = [IsNotStudent]
