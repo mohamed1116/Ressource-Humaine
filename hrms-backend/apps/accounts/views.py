@@ -214,6 +214,7 @@ class UserCreateView(generics.CreateAPIView):
     permission_classes = [IsSuperAdmin]
 
 
+# User detail view - Super Admin manages individual user accounts
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     """GET/PATCH/DELETE /api/v1/auth/users/<uuid>/ -- Super Admin user management."""
     queryset = User.objects.all()
