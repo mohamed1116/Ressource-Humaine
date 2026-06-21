@@ -225,6 +225,7 @@ class UnreadCountView(APIView):
         return Response({'unread_count': count})
 
 
+# User list view for messaging - returns all active users for conversation creation
 class UserListView(APIView):
     permission_classes = [IsNotStudent]
 
