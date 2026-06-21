@@ -1,3 +1,4 @@
+# URL routing for accounts and authentication endpoints
 from django.urls import path
 from . import views, superadmin_views, broadcast_views
 
