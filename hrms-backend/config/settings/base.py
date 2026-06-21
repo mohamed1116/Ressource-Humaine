@@ -117,7 +117,7 @@ MEDIA_HOST = os.environ.get('MEDIA_HOST', 'http://localhost:8000')
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# REST Framework
+# Django REST Framework configuration - JWT auth, pagination, filtering
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
