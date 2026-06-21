@@ -1,3 +1,4 @@
+# Permissions classes for role-based access control
 from rest_framework.permissions import BasePermission
 
 
