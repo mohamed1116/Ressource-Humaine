@@ -246,6 +246,7 @@ class UserPasswordResetView(APIView):
         return Response({'detail': 'Password reset successfully.'})
 
 
+# Bulk import - Super Admin imports users from Excel file
 class UserBulkImportView(APIView):
     """POST /api/v1/auth/users/bulk-import/ -- Super Admin imports users from Excel."""
     permission_classes = [IsSuperAdmin]
