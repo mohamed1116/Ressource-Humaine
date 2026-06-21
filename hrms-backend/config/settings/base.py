@@ -106,6 +106,7 @@ USE_I18N = True
 USE_TZ = True
 
 # Static and media file serving configuration
+# MEDIA_ROOT stores user uploads, STATIC_ROOT for collectstatic output
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
