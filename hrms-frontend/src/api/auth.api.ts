@@ -1,4 +1,5 @@
-// Authentication API - login, logout, token refresh, profile, password
+// Authentication API service
+// Endpoints: login, logout, token refresh, profile, password change and reset
 import api from './axiosInstance';
 import type { LoginPayload, LoginResponse, User } from '../types/auth.types';
 
