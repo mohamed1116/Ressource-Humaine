@@ -1,4 +1,5 @@
-// Auth context - manages JWT session, persists user across page refreshes
+// Auth context - manages JWT session with auto-refresh on page load
+// Provides useAuth() hook for accessing user state throughout the app
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { User } from '../types/auth.types';
 import * as authApi from '../api/auth.api';
