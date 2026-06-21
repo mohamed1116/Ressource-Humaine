@@ -240,6 +240,7 @@ class UserListView(APIView):
         return Response(UserMiniSerializer(users, many=True, context={'request': request}).data)
 
 
+# User search - search users by name or email for new conversation
 class UserSearchView(APIView):
     permission_classes = [IsNotStudent]
 
