@@ -59,6 +59,7 @@ class AdminBroadcastView(APIView):
         return Response({'count': count})
 
 
+# Notification list - returns all notifications for the authenticated user
 class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
