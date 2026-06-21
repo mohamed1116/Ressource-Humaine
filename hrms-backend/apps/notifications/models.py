@@ -45,6 +45,7 @@ class Notification(TimeStampedModel):
         return f'{self.title} -> {self.recipient}'
 
 
+# Per-user notification channel preferences - email and in-app toggles
 class NotificationPreference(TimeStampedModel):
     """Per-user notification preferences."""
     user = models.OneToOneField(
