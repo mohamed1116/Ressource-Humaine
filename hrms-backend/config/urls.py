@@ -1,4 +1,5 @@
 # Main URL configuration for HRMS API
+# All app URLs are prefixed with /api/v1/
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
