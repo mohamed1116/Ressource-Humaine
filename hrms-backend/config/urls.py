@@ -1,3 +1,4 @@
+# Main URL configuration for HRMS API
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
