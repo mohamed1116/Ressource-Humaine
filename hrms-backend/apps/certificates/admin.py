@@ -2,6 +2,7 @@
 Django admin configuration for the Document Template System.
 Allows managing templates, requests, and missions through the admin panel.
 """
+# Django admin registration for certificates app
 from django.contrib import admin
 from .models import DocumentTemplate, DocumentRequest, GeneratedDocument, Mission
 
