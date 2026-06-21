@@ -1,3 +1,4 @@
+// Authentication API - login, logout, token refresh, profile, password
 import api from './axiosInstance';
 import type { LoginPayload, LoginResponse, User } from '../types/auth.types';
 
