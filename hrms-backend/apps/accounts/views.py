@@ -108,6 +108,7 @@ class ProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
+# Change password - allows authenticated users to update their own password
 class ChangePasswordView(APIView):
     """PUT /api/v1/auth/change-password/"""
     permission_classes = [IsAuthenticated]
