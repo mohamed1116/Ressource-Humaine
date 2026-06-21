@@ -103,6 +103,7 @@ class MessageRead(models.Model):
         unique_together = ('message', 'user')
 
 
+# Emoji reactions on messages - one reaction per user per emoji per message
 class MessageReaction(models.Model):
     message  = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='reactions')
     user     = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
