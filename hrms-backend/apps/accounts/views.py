@@ -207,6 +207,7 @@ class UserListView(generics.ListAPIView):
     filterset_fields = ['role', 'is_active']
 
 
+# User create view - Super Admin creates new users
 class UserCreateView(generics.CreateAPIView):
     """POST /api/v1/auth/users/ -- Super Admin creates new user."""
     serializer_class = UserCreateSerializer
