@@ -25,11 +25,8 @@ export function usePermissions() {
     /** True if the user has one of the given roles */
     hasRole: (...roles: Role[]) => role !== null && roles.includes(role),
 
-    /** Super Admin -- full system control + user management */
-    isSuperAdmin: role === 'SUPER_ADMIN',
-
     /** Admin / HR -- full system control */
-    isAdmin: role === 'ADMIN_HR' || role === 'SUPER_ADMIN',
+    isAdmin: role === 'ADMIN_HR',
 
     /** Department head -- approvals, evaluations */
     isHead: role === 'DEPARTMENT_HEAD',
@@ -44,13 +41,10 @@ export function usePermissions() {
     isStudent: role === 'STUDENT',
 
     /** Can manage HR operations (employees, salary, templates, audit) */
-    canManageHR: role === 'ADMIN_HR' || role === 'SUPER_ADMIN',
+    canManageHR: role === 'ADMIN_HR',
 
     /** Can approve requests (HR or department head) */
-    canApprove: role === 'ADMIN_HR' || role === 'SUPER_ADMIN' || role === 'DEPARTMENT_HEAD',
-
-    /** Can manage users (Super Admin only) */
-    canManageUsers: role === 'SUPER_ADMIN',
+    canApprove: role === 'ADMIN_HR' || role === 'DEPARTMENT_HEAD',
 
     /** Can request administrative documents (everyone except students) */
     canRequestAdminDocs: role !== 'STUDENT' && role !== null,
@@ -62,7 +56,7 @@ export function usePermissions() {
     canViewMissions: role !== 'STUDENT' && role !== null,
 
     /** Can manage missions (create/approve) */
-    canManageMissions: role === 'ADMIN_HR' || role === 'SUPER_ADMIN',
+    canManageMissions: role === 'ADMIN_HR',
 
     /** Can view evaluations */
     canViewEvaluations: role === 'ADMIN_HR' || role === 'DEPARTMENT_HEAD',
@@ -73,7 +67,6 @@ export function usePermissions() {
 }
 
 export const ROLE_LABELS: Record<Role, string> = {
-  SUPER_ADMIN: 'Super Admin',
   ADMIN_HR: 'Administrateur RH',
   DEPARTMENT_HEAD: 'Chef de Departement',
   PROFESSOR: 'Enseignant',

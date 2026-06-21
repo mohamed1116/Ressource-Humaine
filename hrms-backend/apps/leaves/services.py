@@ -32,8 +32,12 @@ class LeaveService:
 
     @staticmethod
     def submit_request(employee, leave_type, start_date, end_date, reason, attachment=None):
-        """Create leave request - balance check disabled, admin decides."""
+        """Create leave request and validate balance."""
         total_days = LeaveService.calculate_business_days(start_date, end_date)
+
+        if not LeaveService.check_balance(employee, leave_type, start_date.year, total_days):
+            raise ValueError('Insufficient leave balance.')
+
         request = LeaveRequest.objects.create(
             employee=employee,
             leave_type=leave_type,
@@ -44,29 +48,6 @@ class LeaveService:
             attachment=attachment,
             status=LeaveRequest.Status.PENDING,
         )
-        # Notify department head and HR
-        from apps.notifications.services import NotificationService
-        from apps.accounts.models import User
-        requester_name = employee.full_name
-        msg = f'{requester_name} a soumis une demande de congé ({leave_type.name}) du {start_date} au {end_date}.'
-        recipients = list(User.objects.filter(role__in=['ADMIN_HR', 'SUPER_ADMIN']))
-        if employee.department and hasattr(employee.department, 'head') and employee.department.head:
-            dept_head_user = employee.department.head.user
-            if dept_head_user not in recipients:
-                recipients.append(dept_head_user)
-        for recipient in recipients:
-            try:
-                NotificationService.create_notification(
-                    recipient=recipient,
-                    notification_type='LEAVE_REQUEST',
-                    title='Nouvelle demande de congé',
-                    message=msg,
-                    action_url='/requests/all',
-                    related_object_type='leave_request',
-                    related_object_id=str(request.id),
-                )
-            except Exception:
-                pass
         return request
 
     @staticmethod

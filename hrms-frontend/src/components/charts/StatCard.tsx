@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-function AnimatedNumber({ end, duration = 2000 }: { end: number; duration?: number; separator?: string }) {
+function AnimatedNumber({ end, duration = 2000, separator = ',' }: { end: number; duration?: number; separator?: string }) {
   const [current, setCurrent] = useState(0);
   const startTime = useRef<number>(0);
   const rafId = useRef<number>(0);

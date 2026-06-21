@@ -23,17 +23,3 @@ export const createDepartment = (data: Record<string, unknown>) =>
 
 export const getPositions = () =>
   api.get('/employees/positions/');
-
-export const uploadSignature = (file: File) => {
-  const form = new FormData();
-  form.append('signature', file);
-  return api.patch('/employees/me/signature/', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-};
-
-export const deleteSignature = () =>
-  api.delete('/employees/me/signature/');
-
-export const toggleCanSign = (id: string) =>
-  api.patch(`/employees/${id}/can-sign/`);

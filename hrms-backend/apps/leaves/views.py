@@ -75,43 +75,10 @@ class LeaveRequestListCreateView(generics.ListCreateAPIView):
         return qs.filter(employee__user=user)
 
     def perform_create(self, serializer):
-        user = self.request.user
-        # Get or auto-create a minimal employee profile
-        if not hasattr(user, 'employee'):
-            from apps.employees.models import Employee, Department, Position
-            from django.utils import timezone
-            # Get or create a default department and position
-            dept, _ = Department.objects.get_or_create(
-                code='DEFAULT',
-                defaults={'name': 'Non assigné', 'code': 'DEFAULT'}
-            )
-            pos, _ = Position.objects.get_or_create(
-                code='DEFAULT',
-                defaults={'title': 'Non assigné', 'code': 'DEFAULT', 'grade_level': 1}
-            )
-            import random, string
-            emp_id = 'EMP' + ''.join(random.choices(string.digits, k=6))
-            while Employee.objects.filter(employee_id=emp_id).exists():
-                emp_id = 'EMP' + ''.join(random.choices(string.digits, k=6))
-            cin = 'CIN' + ''.join(random.choices(string.digits, k=6))
-            while Employee.objects.filter(cin=cin).exists():
-                cin = 'CIN' + ''.join(random.choices(string.digits, k=6))
-            Employee.objects.create(
-                user=user,
-                employee_id=emp_id,
-                employee_type='STAFF',
-                department=dept,
-                position=pos,
-                cin=cin,
-                date_of_birth='1990-01-01',
-                gender='M',
-                hire_date=timezone.now().date(),
-                contract_type='PERMANENT',
-            )
-            user.refresh_from_db()
+        employee = self.request.user.employee
         data = serializer.validated_data
         leave_request = LeaveService.submit_request(
-            employee=user.employee,
+            employee=employee,
             leave_type=data['leave_type'],
             start_date=data['start_date'],
             end_date=data['end_date'],

@@ -26,7 +26,7 @@ export default function LeaveRequestPage() {
     try {
       await createLeaveRequest({ leave_type: leaveType, start_date: startDate, end_date: endDate, reason });
       setSuccess(true);
-      setTimeout(() => navigate('/requests'), 2000);
+      setTimeout(() => navigate('/leaves'), 2000);
     } catch { alert('Erreur lors de la soumission.'); }
     finally { setLoading(false); }
   };

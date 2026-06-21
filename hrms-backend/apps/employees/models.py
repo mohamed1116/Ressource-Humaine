@@ -77,10 +77,6 @@ class Employee(TimeStampedModel):
     emergency_contact_name = models.CharField(max_length=200, blank=True)
     emergency_contact_phone = models.CharField(max_length=20, blank=True)
 
-    # Signature
-    signature = models.ImageField(upload_to='signatures/', null=True, blank=True)
-    can_sign = models.BooleanField(default=False, help_text='Autorise l\'employé à signer ses attestations avant envoi.')
-
     # Employment
     hire_date = models.DateField()
     contract_type = models.CharField(max_length=10, choices=ContractType.choices)

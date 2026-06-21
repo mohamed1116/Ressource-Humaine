@@ -1,0 +1,365 @@
+@startuml SGRH_UseCaseDiagram
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+
+skinparam actor {
+  BackgroundColor #1e293b
+  BorderColor #0f172a
+  FontColor #FFFFFF
+  FontSize 11
+}
+
+skinparam usecase {
+  BackgroundColor #f8fafc
+  BorderColor #94a3b8
+  FontColor #1e293b
+  FontSize 10
+  ArrowColor #475569
+  ArrowThickness 1.5
+}
+
+skinparam package {
+  BackgroundColor #f1f5f9
+  BorderColor #cbd5e1
+  FontColor #1e293b
+  FontStyle bold
+  FontSize 12
+}
+
+skinparam rectangle {
+  BackgroundColor #ffffff
+  BorderColor #e2e8f0
+}
+
+left to right direction
+
+' ─────────────── ACTORS ───────────────
+actor "Super Admin"        as SA   #1e293b
+actor "Administrateur RH"  as HR   #1e3a5f
+actor "Chef de Département" as CD  #1a4731
+actor "Professeur"         as PR   #4a1942
+actor "Personnel Admin."   as ST   #7c2d12
+actor "Étudiant"           as ETU  #1e3a5f
+
+' ─────────────── SYSTEM BOUNDARY ───────────────
+rectangle "SGRH — Faculté Polydisciplinaire de Taroudant" {
+
+  ' ══════════════════════════════════════
+  package "Authentification" {
+    usecase "Se connecter"             as UC_LOGIN
+    usecase "Réinitialiser mot de passe" as UC_PWD
+  }
+
+  ' ══════════════════════════════════════
+  package "Profil" {
+    usecase "Consulter son profil"     as UC_PROFILE
+    usecase "Modifier son profil"      as UC_EDIT_PROFILE
+  }
+
+  ' ══════════════════════════════════════
+  package "Tableau de bord" {
+    usecase "Tableau de bord personnel"  as UC_DASH
+    usecase "Tableau de bord Super Admin" as UC_SADASH
+  }
+
+  ' ══════════════════════════════════════
+  package "Gestion des Demandes" {
+    usecase "Soumettre une attestation"   as UC_CERT
+    usecase "Soumettre une demande libre" as UC_FREE
+    usecase "Soumettre une demande de congé" as UC_LEAVE_REQ
+    usecase "Soumettre une mission"       as UC_MISS_REQ
+    usecase "Consulter mes demandes"      as UC_MY_REQ
+    usecase "Consulter toutes les demandes" as UC_ALL_REQ
+    usecase "Approuver une demande"       as UC_APPROVE
+    usecase "Rejeter une demande"         as UC_REJECT
+  }
+
+  ' ══════════════════════════════════════
+  package "Attestations & Documents" {
+    usecase "Consulter mes documents"     as UC_MY_DOCS
+    usecase "Prévisualiser un document"   as UC_PREVIEW
+    usecase "Générer un PDF"              as UC_GEN_PDF
+    usecase "Télécharger un PDF"          as UC_DL_PDF
+    usecase "Signer un document"          as UC_SIGN
+    usecase "Télécharger pièce jointe"    as UC_DL_ATT
+    usecase "Gérer les demandes (HR)"     as UC_MANAGE_DOCS
+  }
+
+  ' ══════════════════════════════════════
+  package "Modèles de Documents" {
+    usecase "Consulter les modèles"       as UC_TPL_LIST
+    usecase "Créer un modèle"             as UC_TPL_CREATE
+    usecase "Modifier un modèle"          as UC_TPL_EDIT
+    usecase "Supprimer un modèle"         as UC_TPL_DEL
+    usecase "Prévisualiser un modèle"     as UC_TPL_PREV
+  }
+
+  ' ══════════════════════════════════════
+  package "Congés" {
+    usecase "Consulter mes congés"        as UC_MY_LEAVES
+    usecase "Approuver congé (Chef Dept)" as UC_LEAVE_DEPT
+    usecase "Approuver congé (RH)"        as UC_LEAVE_HR
+    usecase "Suivre les soldes de congés" as UC_LEAVE_BAL
+  }
+
+  ' ══════════════════════════════════════
+  package "Missions" {
+    usecase "Consulter les missions"      as UC_MISS_LIST
+    usecase "Approuver une mission"       as UC_MISS_APPR
+    usecase "Générer ordre de mission"    as UC_MISS_PDF
+  }
+
+  ' ══════════════════════════════════════
+  package "Présences & Absences" {
+    usecase "Enregistrer présence"        as UC_ATT_REC
+    usecase "Consulter présences"         as UC_ATT_VIEW
+  }
+
+  ' ══════════════════════════════════════
+  package "Gestion des Employés" {
+    usecase "Consulter les enseignants"   as UC_EMP_LIST
+    usecase "Consulter le personnel admin." as UC_STAFF_LIST
+    usecase "Gérer les départements"      as UC_DEPT
+  }
+
+  ' ══════════════════════════════════════
+  package "Salaires" {
+    usecase "Consulter les salaires"      as UC_SAL
+    usecase "Consulter les fiches de paie" as UC_PAYSLIP
+  }
+
+  ' ══════════════════════════════════════
+  package "Évaluations & Performance" {
+    usecase "Consulter les évaluations"   as UC_EVAL_VIEW
+    usecase "Créer une évaluation"        as UC_EVAL_CREATE
+    usecase "Modifier une évaluation"     as UC_EVAL_EDIT
+  }
+
+  ' ══════════════════════════════════════
+  package "Promotions & Tableaux" {
+    usecase "Générer tableaux d'avancement" as UC_PROMO
+    usecase "Exporter tableaux PDF"         as UC_PROMO_EXP
+  }
+
+  ' ══════════════════════════════════════
+  package "Messagerie" {
+    usecase "Envoyer un message"          as UC_MSG_SEND
+    usecase "Consulter les messages"      as UC_MSG_VIEW
+    usecase "Joindre un fichier"          as UC_MSG_ATT
+  }
+
+  ' ══════════════════════════════════════
+  package "Notifications" {
+    usecase "Consulter les notifications" as UC_NOTIF
+    usecase "Marquer comme lu"            as UC_NOTIF_READ
+    usecase "Diffusion groupée (broadcast)" as UC_BROADCAST
+  }
+
+  ' ══════════════════════════════════════
+  package "IA & Analyses" {
+    usecase "Consulter les insights IA"   as UC_AI
+    usecase "Détecter tendances congés"   as UC_AI_LEAVE
+    usecase "Détecter retards récurrents" as UC_AI_LATE
+    usecase "Recommandations automatiques" as UC_AI_REC
+  }
+
+  ' ══════════════════════════════════════
+  package "Rapports" {
+    usecase "Générer rapports RH"         as UC_REPORTS
+    usecase "Exporter données"            as UC_EXPORT
+  }
+
+  ' ══════════════════════════════════════
+  package "Journal d'Audit" {
+    usecase "Consulter le journal d'audit" as UC_AUDIT
+  }
+
+  ' ══════════════════════════════════════
+  package "Administration Système (Super Admin)" {
+    usecase "Gérer les utilisateurs"      as UC_USERS
+    usecase "Activer / Désactiver compte" as UC_TOGGLE
+    usecase "Réinitialiser mot de passe"  as UC_RESET_PWD
+    usecase "Tableau de bord système"     as UC_SYS_DASH
+  }
+
+}
+
+' ═══════════════════════════════════════════════════════════
+' SUPER ADMIN
+' ═══════════════════════════════════════════════════════════
+SA --> UC_LOGIN
+SA --> UC_SADASH
+SA --> UC_USERS
+SA --> UC_TOGGLE
+SA --> UC_RESET_PWD
+SA --> UC_SYS_DASH
+SA --> UC_BROADCAST
+SA --> UC_AUDIT
+SA --> UC_ALL_REQ
+SA --> UC_APPROVE
+SA --> UC_REJECT
+SA --> UC_MANAGE_DOCS
+SA --> UC_TPL_LIST
+SA --> UC_TPL_CREATE
+SA --> UC_TPL_EDIT
+SA --> UC_TPL_DEL
+SA --> UC_REPORTS
+SA --> UC_AI
+SA --> UC_MSG_SEND
+SA --> UC_NOTIF
+SA --> UC_PROFILE
+
+' ═══════════════════════════════════════════════════════════
+' ADMIN RH
+' ═══════════════════════════════════════════════════════════
+HR --> UC_LOGIN
+HR --> UC_DASH
+HR --> UC_PROFILE
+HR --> UC_ALL_REQ
+HR --> UC_APPROVE
+HR --> UC_REJECT
+HR --> UC_MANAGE_DOCS
+HR --> UC_PREVIEW
+HR --> UC_GEN_PDF
+HR --> UC_DL_PDF
+HR --> UC_DL_ATT
+HR --> UC_TPL_LIST
+HR --> UC_TPL_CREATE
+HR --> UC_TPL_EDIT
+HR --> UC_TPL_DEL
+HR --> UC_TPL_PREV
+HR --> UC_LEAVE_HR
+HR --> UC_LEAVE_BAL
+HR --> UC_MISS_APPR
+HR --> UC_MISS_PDF
+HR --> UC_MISS_LIST
+HR --> UC_EMP_LIST
+HR --> UC_STAFF_LIST
+HR --> UC_DEPT
+HR --> UC_SAL
+HR --> UC_PAYSLIP
+HR --> UC_ATT_REC
+HR --> UC_ATT_VIEW
+HR --> UC_EVAL_VIEW
+HR --> UC_EVAL_CREATE
+HR --> UC_EVAL_EDIT
+HR --> UC_PROMO
+HR --> UC_PROMO_EXP
+HR --> UC_AI
+HR --> UC_AI_LEAVE
+HR --> UC_AI_LATE
+HR --> UC_AI_REC
+HR --> UC_REPORTS
+HR --> UC_EXPORT
+HR --> UC_AUDIT
+HR --> UC_MSG_SEND
+HR --> UC_MSG_VIEW
+HR --> UC_NOTIF
+HR --> UC_NOTIF_READ
+HR --> UC_BROADCAST
+
+' ═══════════════════════════════════════════════════════════
+' CHEF DE DÉPARTEMENT
+' ═══════════════════════════════════════════════════════════
+CD --> UC_LOGIN
+CD --> UC_DASH
+CD --> UC_PROFILE
+CD --> UC_CERT
+CD --> UC_FREE
+CD --> UC_LEAVE_REQ
+CD --> UC_MISS_REQ
+CD --> UC_MY_REQ
+CD --> UC_MY_LEAVES
+CD --> UC_LEAVE_DEPT
+CD --> UC_MISS_LIST
+CD --> UC_MY_DOCS
+CD --> UC_DL_PDF
+CD --> UC_SIGN
+CD --> UC_EVAL_VIEW
+CD --> UC_EVAL_CREATE
+CD --> UC_ATT_VIEW
+CD --> UC_MSG_SEND
+CD --> UC_MSG_VIEW
+CD --> UC_NOTIF
+CD --> UC_NOTIF_READ
+
+' ═══════════════════════════════════════════════════════════
+' PROFESSEUR
+' ═══════════════════════════════════════════════════════════
+PR --> UC_LOGIN
+PR --> UC_DASH
+PR --> UC_PROFILE
+PR --> UC_CERT
+PR --> UC_FREE
+PR --> UC_LEAVE_REQ
+PR --> UC_MISS_REQ
+PR --> UC_MY_REQ
+PR --> UC_MY_LEAVES
+PR --> UC_LEAVE_BAL
+PR --> UC_MISS_LIST
+PR --> UC_MY_DOCS
+PR --> UC_DL_PDF
+PR --> UC_SIGN
+PR --> UC_ATT_VIEW
+PR --> UC_MSG_SEND
+PR --> UC_MSG_VIEW
+PR --> UC_NOTIF
+PR --> UC_NOTIF_READ
+
+' ═══════════════════════════════════════════════════════════
+' PERSONNEL ADMINISTRATIF
+' ═══════════════════════════════════════════════════════════
+ST --> UC_LOGIN
+ST --> UC_DASH
+ST --> UC_PROFILE
+ST --> UC_CERT
+ST --> UC_FREE
+ST --> UC_LEAVE_REQ
+ST --> UC_MISS_REQ
+ST --> UC_MY_REQ
+ST --> UC_MY_LEAVES
+ST --> UC_LEAVE_BAL
+ST --> UC_MISS_LIST
+ST --> UC_MY_DOCS
+ST --> UC_DL_PDF
+ST --> UC_ATT_VIEW
+ST --> UC_MSG_SEND
+ST --> UC_MSG_VIEW
+ST --> UC_NOTIF
+ST --> UC_NOTIF_READ
+
+' ═══════════════════════════════════════════════════════════
+' ÉTUDIANT
+' ═══════════════════════════════════════════════════════════
+ETU --> UC_LOGIN
+ETU --> UC_PWD
+ETU --> UC_DASH
+ETU --> UC_PROFILE
+ETU --> UC_CERT
+ETU --> UC_FREE
+ETU --> UC_MY_REQ
+ETU --> UC_MY_DOCS
+ETU --> UC_DL_PDF
+ETU --> UC_NOTIF
+ETU --> UC_NOTIF_READ
+
+' ═══════════════════════════════════════════════════════════
+' INCLUDE / EXTEND RELATIONS
+' ═══════════════════════════════════════════════════════════
+UC_APPROVE      .> UC_NOTIF      : <<include>>
+UC_REJECT       .> UC_NOTIF      : <<include>>
+UC_GEN_PDF      .> UC_DL_PDF     : <<extend>>
+UC_SIGN         .> UC_DL_PDF     : <<include>>
+UC_MISS_APPR    .> UC_MISS_PDF   : <<include>>
+UC_FREE         .> UC_DL_ATT     : <<extend>>
+UC_MSG_SEND     .> UC_MSG_ATT    : <<extend>>
+UC_AI           .> UC_AI_LEAVE   : <<include>>
+UC_AI           .> UC_AI_LATE    : <<include>>
+UC_AI           .> UC_AI_REC     : <<include>>
+UC_PROMO        .> UC_PROMO_EXP  : <<extend>>
+UC_LEAVE_REQ    .> UC_LEAVE_DEPT : <<include>>
+UC_LEAVE_DEPT   .> UC_LEAVE_HR   : <<include>>
+
+@enduml

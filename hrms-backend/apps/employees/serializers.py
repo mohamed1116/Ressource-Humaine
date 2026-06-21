@@ -57,43 +57,17 @@ class EmployeeDocumentSerializer(serializers.ModelSerializer):
 
 class EmployeeListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views."""
-    full_name = serializers.SerializerMethodField()
+    full_name = serializers.CharField(source='full_name', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
-    phone_number = serializers.CharField(source='user.phone', read_only=True)
     department_name = serializers.CharField(source='department.name', read_only=True)
-    department_id = serializers.UUIDField(source='department.id', read_only=True)
     position_title = serializers.CharField(source='position.title', read_only=True)
-    specialization = serializers.SerializerMethodField()
-    teaching_hours = serializers.SerializerMethodField()
-    publications_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Employee
         fields = [
-            'id', 'employee_id', 'numero_somme', 'full_name', 'email', 'phone_number',
-            'employee_type', 'department_name', 'department_id', 'position_title',
-            'hire_date', 'is_active', 'cin', 'date_of_birth', 'address',
-            'emergency_contact_name', 'emergency_contact_phone',
-            'specialization', 'teaching_hours', 'publications_count', 'can_sign',
+            'id', 'employee_id', 'numero_somme', 'full_name', 'email', 'employee_type',
+            'department_name', 'position_title', 'hire_date', 'is_active',
         ]
-
-    def get_full_name(self, obj):
-        return obj.full_name
-
-    def get_specialization(self, obj):
-        if hasattr(obj, 'professor_profile'):
-            return obj.professor_profile.specialization
-        return None
-
-    def get_teaching_hours(self, obj):
-        if hasattr(obj, 'professor_profile'):
-            return obj.professor_profile.teaching_hours_per_week
-        return None
-
-    def get_publications_count(self, obj):
-        if hasattr(obj, 'professor_profile'):
-            return obj.professor_profile.publications_count
-        return None
 
 
 class EmployeeDetailSerializer(serializers.ModelSerializer):
@@ -115,7 +89,7 @@ class EmployeeDetailSerializer(serializers.ModelSerializer):
             'cin', 'date_of_birth', 'gender', 'address', 'city',
             'emergency_contact_name', 'emergency_contact_phone',
             'hire_date', 'contract_type', 'is_active', 'termination_date',
-            'professor_profile', 'staff_profile', 'documents', 'signature',
-            'can_sign', 'created_at', 'updated_at',
+            'professor_profile', 'staff_profile', 'documents',
+            'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

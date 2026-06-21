@@ -4,9 +4,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { usePermissions, ROLE_LABELS } from '../../hooks/usePermissions';
-import { getMyRequests, getAllRequests, getRequestStats, reviewRequest } from '../../api/requests.api';
-import { getNotifications, markAsRead } from '../../api/notifications.api';
+import { usePermissions } from '../../hooks/usePermissions';
+import { getMyRequests, getAllRequests, getRequestStats } from '../../api/requests.api';
+import { reviewRequest } from '../../api/requests.api';
 
 type R = Record<string, unknown>;
 
@@ -99,7 +99,7 @@ function AdminView() {
               {Number(certs.pending)||0} attestation{(Number(certs.pending)||0) > 1 ? 's' : ''} &middot; {Number(leaves.pending)||0} conge{(Number(leaves.pending)||0) > 1 ? 's' : ''} &middot; {Number(missions.pending)||0} mission{(Number(missions.pending)||0) > 1 ? 's' : ''}
             </p>
           </div>
-          <Link to="/certificates/manage" className="ml-auto px-3 py-1.5 text-xs font-medium text-amber-700 border border-amber-300 rounded-lg hover:bg-amber-100 flex-shrink-0">
+          <Link to="/requests/all" className="ml-auto px-3 py-1.5 text-xs font-medium text-amber-700 border border-amber-300 rounded-lg hover:bg-amber-100 flex-shrink-0">
             Traiter maintenant
           </Link>
         </div>
@@ -122,7 +122,7 @@ function AdminView() {
               <h3 className="text-sm font-semibold text-gray-800">A traiter</h3>
               <p className="text-[11px] text-gray-400 mt-0.5">Approuvez ou rejetez directement</p>
             </div>
-            <Link to="/certificates/manage" className="text-xs text-blue-600 hover:underline">Tout voir</Link>
+            <Link to="/requests/all" className="text-xs text-blue-600 hover:underline">Tout voir</Link>
           </div>
           {pending.length === 0 ? (
             <div className="p-8 text-center">
@@ -174,10 +174,10 @@ function AdminView() {
               <h3 className="text-sm font-semibold text-gray-800">Raccourcis</h3>
             </div>
             <div className="p-2">
-              <QL to="/certificates/manage" label="Gerer les demandes" />
+              <QL to="/requests/all" label="Gerer les demandes" />
               <QL to="/templates" label="Modeles de documents" />
               <QL to="/employees" label="Personnel" />
-              <QL to="/reports" label="Rapports" />
+              <QL to="/departments" label="Departements" />
               <QL to="/audit" label="Journal d'audit" />
             </div>
           </div>
@@ -208,223 +208,41 @@ function AdminView() {
    DEPARTMENT HEAD
    ═════════════════════════════════════ */
 function HeadView() {
-  const { user } = useAuth();
-  const [requests, setRequests]     = useState<R[]>([]);
-  const [leaves, setLeaves]         = useState<R[]>([]);
-  const [balances, setBalances]     = useState<R[]>([]);
-  const [missions, setMissions]     = useState<R[]>([]);
-  const [attendance, setAttendance] = useState<R | null>(null);
-
-  useEffect(() => {
-    getMyRequests().then(r => setRequests(r.data as R[])).catch(() => {});
-    import('../../api/leaves.api').then(({ getLeaveRequests, getLeaveBalances }) => {
-      getLeaveRequests().then(r => setLeaves(r.data.results ?? r.data)).catch(() => {});
-      getLeaveBalances().then(r => setBalances(r.data.results ?? r.data)).catch(() => {});
-    });
-    import('../../api/certificates.api').then(({ getMissions }) => {
-      getMissions().then(r => setMissions(r.data.results ?? r.data)).catch(() => {});
-    });
-    import('../../api/attendance.api').then(({ getTodayAttendance }) => {
-      getTodayAttendance().then(r => setAttendance(r.data as R)).catch(() => {});
-    });
-  }, []);
-
-  const pendingReqs    = requests.filter(r => r.status === 'PENDING');
-  const approvedReqs   = requests.filter(r => r.status === 'APPROVED');
-  const activeMissions = missions.filter(m => m.status === 'APPROVED' || m.status === 'IN_PROGRESS');
-  const pendingLeaves  = leaves.filter(l => l.status === 'PENDING' || l.status === 'DEPT_APPROVED');
-
-  const annualBalance = (balances as R[]).find(b => {
-    const name = ((b.leave_type_name as string) || '').toLowerCase();
-    return name.includes('annuel') || name.includes('annual');
-  });
+  const [requests, setRequests] = useState<R[]>([]);
+  useEffect(() => { getMyRequests().then(r => setRequests(r.data as R[])).catch(() => {}); }, []);
+  const pending = requests.filter(r => r.status === 'PENDING');
+  const approved = requests.filter(r => r.status === 'APPROVED');
 
   return (
     <div className="space-y-6">
-
-      {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-          <p className="text-xs text-gray-500">Demandes</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{requests.length}</p>
-          <p className="text-[11px] text-gray-400 mt-0.5">{pendingReqs.length} en attente · {approvedReqs.length} approuvées</p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-          <p className="text-xs text-gray-500">Congés restants</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">
-            {annualBalance ? `${annualBalance.remaining_days}j` : '—'}
-          </p>
-          <p className="text-[11px] text-gray-400 mt-0.5">
-            {annualBalance ? `sur ${annualBalance.total_days}j alloués` : 'Solde non disponible'}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-          <p className="text-xs text-gray-500">Missions</p>
-          <p className="text-2xl font-bold text-teal-600 mt-1">{missions.length}</p>
-          <p className="text-[11px] text-gray-400 mt-0.5">{activeMissions.length} active{activeMissions.length !== 1 ? 's' : ''}</p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-          <p className="text-xs text-gray-500">Présence aujourd'hui</p>
-          <p className={`text-2xl font-bold mt-1 ${attendance ? 'text-green-600' : 'text-gray-300'}`}>
-            {attendance ? (attendance.check_out ? '✓' : '→') : '—'}
-          </p>
-          <p className="text-[11px] text-gray-400 mt-0.5">
-            {attendance
-              ? attendance.check_out
-                ? `${(attendance.check_in as string)?.slice(11,16)} — ${(attendance.check_out as string)?.slice(11,16)}`
-                : `Entré à ${(attendance.check_in as string)?.slice(11,16)}`
-              : 'Non pointé'}
-          </p>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <SC label="Total demandes" value={requests.length} />
+        <SC label="En attente" value={pending.length} accent="amber" />
+        <SC label="Approuvees" value={approved.length} accent="green" />
       </div>
 
-      {/* ── Pending banner ── */}
-      {pendingReqs.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-5 py-3 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-bold text-amber-600">{pendingReqs.length}</span>
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-amber-800">
-              {pendingReqs.length} demande{pendingReqs.length > 1 ? 's' : ''} en cours de traitement
-            </p>
-            <div className="flex gap-3 mt-1">
-              {pendingReqs.slice(0, 2).map(r => (
-                <span key={`${r.type}-${r.id}`} className="text-xs text-amber-600 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
-                  {r.title as string}
-                </span>
-              ))}
+      {/* Status tracker for pending */}
+      {pending.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <p className="text-sm font-medium text-amber-800 mb-2">{pending.length} demande{pending.length > 1 ? 's' : ''} en cours de traitement</p>
+          {pending.slice(0, 3).map(r => (
+            <div key={`${r.type}-${r.id}`} className="flex items-center gap-2 mt-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <p className="text-xs text-amber-700">{r.title as string}</p>
             </div>
-          </div>
+          ))}
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* ── Left col ── */}
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* Raccourcis */}
-          <div className="grid grid-cols-3 gap-3">
-            <Link to="/requests/new" className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 hover:border-blue-200 hover:shadow transition-all group text-center">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center mx-auto mb-2">
-                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
-              </div>
-              <p className="text-xs font-medium text-gray-700">Attestation</p>
-            </Link>
-            <Link to="/requests/new?type=LEAVE" className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 hover:border-purple-200 hover:shadow transition-all group text-center">
-              <div className="w-10 h-10 rounded-lg bg-purple-50 group-hover:bg-purple-100 flex items-center justify-center mx-auto mb-2">
-                <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
-              </div>
-              <p className="text-xs font-medium text-gray-700">Congé</p>
-            </Link>
-            <Link to="/requests/new?type=MISSION" className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 hover:border-teal-200 hover:shadow transition-all group text-center">
-              <div className="w-10 h-10 rounded-lg bg-teal-50 group-hover:bg-teal-100 flex items-center justify-center mx-auto mb-2">
-                <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>
-              </div>
-              <p className="text-xs font-medium text-gray-700">Mission</p>
-            </Link>
-          </div>
-
-          {/* Dernières demandes */}
-          <Card title="Mes dernières demandes" link="/requests">
-            {requests.length === 0
-              ? <Empty text="Aucune demande pour le moment." />
-              : requests.slice(0, 5).map(r => (
-                <Row key={`${r.type}-${r.id}`} badge={r.type as string} main={r.title as string} status={r.status as string} sub={(r.created_at as string)?.slice(0, 10)} />
-              ))}
+        <div className="lg:col-span-2">
+          <Card title="Historique de mes demandes" link="/requests">
+            {requests.length === 0 ? <Empty text="Vous n'avez pas encore fait de demande." /> : requests.slice(0, 6).map(r => (
+              <Row key={`${r.type}-${r.id}`} badge={r.type as string} main={r.title as string} status={r.status as string} sub={(r.created_at as string)?.slice(0, 10)} />
+            ))}
           </Card>
-
-          {/* Soldes de congés */}
-          {balances.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-800">Soldes de congés</h3>
-                <Link to="/leaves" className="text-xs text-blue-600 hover:underline">Voir tout</Link>
-              </div>
-              <div className="p-4 grid grid-cols-2 gap-3">
-                {(balances as R[]).slice(0, 4).map((b, i) => (
-                  <div key={i} className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 truncate">{b.leave_type_name as string}</p>
-                    <div className="flex items-end gap-1 mt-1">
-                      <span className="text-lg font-bold text-gray-900">{b.remaining_days as number}</span>
-                      <span className="text-xs text-gray-400 mb-0.5">/ {b.total_days as number}j</span>
-                    </div>
-                    <div className="mt-1.5 h-1 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 rounded-full"
-                        style={{ width: `${Math.min(100, (Number(b.remaining_days) / Number(b.total_days)) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* ── Right col ── */}
-        <div className="space-y-6">
-
-          {/* Profile */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-[#0f172a] flex items-center justify-center text-white font-bold flex-shrink-0">
-                {user?.first_name?.[0]}{user?.last_name?.[0]}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">{user?.first_name} {user?.last_name}</p>
-                <p className="text-xs text-gray-400">{ROLE_LABELS[user?.role as keyof typeof ROLE_LABELS] ?? user?.role}</p>
-              </div>
-            </div>
-            <Link to="/profile" className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              Voir mon profil
-            </Link>
-          </div>
-
-          {/* Missions actives */}
-          {activeMissions.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-800">Missions actives</h3>
-                <Link to="/missions" className="text-xs text-blue-600 hover:underline">Tout voir</Link>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {activeMissions.slice(0, 3).map(m => (
-                  <div key={m.id as string} className="px-5 py-3">
-                    <p className="text-xs font-medium text-gray-800 truncate">{m.title as string}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{m.destination as string} · {(m.start_date as string)?.slice(0, 10)}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Calendrier */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-800">Calendrier</h3>
-              <p className="text-[11px] text-gray-400 mt-0.5">Congés et missions ce mois</p>
-            </div>
-            <div className="p-4">
-              <MiniCalendar leaves={leaves} missions={missions} />
-            </div>
-          </div>
-
-          {/* Congés en attente */}
-          {pendingLeaves.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <p className="text-xs font-semibold text-amber-800 mb-2">{pendingLeaves.length} congé{pendingLeaves.length > 1 ? 's' : ''} en attente</p>
-              {pendingLeaves.slice(0, 2).map((l, i) => (
-                <div key={i} className="flex items-center gap-2 mt-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                  <p className="text-xs text-amber-700 truncate">{(l.start_date as string)?.slice(0, 10)} → {(l.end_date as string)?.slice(0, 10)}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
@@ -434,225 +252,37 @@ function HeadView() {
    PROFESSOR / STAFF
    ═════════════════════════════════════ */
 function EmployeeView() {
-  const { user } = useAuth();
-  const [requests, setRequests]     = useState<R[]>([]);
-  const [leaves, setLeaves]         = useState<R[]>([]);
-  const [balances, setBalances]     = useState<R[]>([]);
-  const [missions, setMissions]     = useState<R[]>([]);
-  const [attendance, setAttendance] = useState<R | null>(null);
-  useEffect(() => {
-    getMyRequests().then(r => setRequests(r.data as R[])).catch(() => {});
-    import('../../api/leaves.api').then(({ getLeaveRequests, getLeaveBalances }) => {
-      getLeaveRequests().then(r => setLeaves(r.data.results ?? r.data)).catch(() => {});
-      getLeaveBalances().then(r => setBalances(r.data.results ?? r.data)).catch(() => {});
-    });
-    import('../../api/certificates.api').then(({ getMissions }) => {
-      getMissions().then(r => setMissions(r.data.results ?? r.data)).catch(() => {});
-    });
-    import('../../api/attendance.api').then(({ getTodayAttendance }) => {
-      getTodayAttendance().then(r => setAttendance(r.data as R)).catch(() => {});
-    });
-  }, []);
-
-  const pendingReqs  = requests.filter(r => r.status === 'PENDING');
-  const approvedReqs = requests.filter(r => r.status === 'APPROVED');
-  const pendingLeaves = leaves.filter(l => l.status === 'PENDING' || l.status === 'DEPT_APPROVED');
-  const activeMissions = missions.filter(m => m.status === 'APPROVED' || m.status === 'IN_PROGRESS');
-
-  const annualBalance = (balances as R[]).find(b => {
-    const name = ((b.leave_type_name as string) || '').toLowerCase();
-    return name.includes('annuel') || name.includes('annual');
-  });
+  const [requests, setRequests] = useState<R[]>([]);
+  useEffect(() => { getMyRequests().then(r => setRequests(r.data as R[])).catch(() => {}); }, []);
+  const pending = requests.filter(r => r.status === 'PENDING');
 
   return (
     <div className="space-y-6">
-
-      {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-          <p className="text-xs text-gray-500">Demandes</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{requests.length}</p>
-          <p className="text-[11px] text-gray-400 mt-0.5">{pendingReqs.length} en attente · {approvedReqs.length} approuvées</p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-          <p className="text-xs text-gray-500">Congés restants</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">
-            {annualBalance ? `${annualBalance.remaining_days}j` : '—'}
-          </p>
-          <p className="text-[11px] text-gray-400 mt-0.5">
-            {annualBalance ? `sur ${annualBalance.total_days}j alloués` : 'Solde non disponible'}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-          <p className="text-xs text-gray-500">Missions</p>
-          <p className="text-2xl font-bold text-teal-600 mt-1">{missions.length}</p>
-          <p className="text-[11px] text-gray-400 mt-0.5">{activeMissions.length} active{activeMissions.length !== 1 ? 's' : ''}</p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-          <p className="text-xs text-gray-500">Présence aujourd'hui</p>
-          <p className={`text-2xl font-bold mt-1 ${
-            attendance ? 'text-green-600' : 'text-gray-300'
-          }`}>
-            {attendance ? (attendance.check_out ? '✓' : '→') : '—'}
-          </p>
-          <p className="text-[11px] text-gray-400 mt-0.5">
-            {attendance
-              ? attendance.check_out
-                ? `${(attendance.check_in as string)?.slice(11,16)} — ${(attendance.check_out as string)?.slice(11,16)}`
-                : `Entré à ${(attendance.check_in as string)?.slice(11,16)}`
-              : 'Non pointé'}
-          </p>
-        </div>
-      </div>
-
-      {/* ── Pending banner ── */}
-      {pendingReqs.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-5 py-3 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-bold text-amber-600">{pendingReqs.length}</span>
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-amber-800">
-              {pendingReqs.length} demande{pendingReqs.length > 1 ? 's' : ''} en cours de traitement
-            </p>
-            <div className="flex gap-3 mt-1">
-              {pendingReqs.slice(0, 2).map(r => (
-                <span key={`${r.type}-${r.id}`} className="text-xs text-amber-600 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
-                  {r.title as string}
-                </span>
-              ))}
+      {/* Status tracker */}
+      {pending.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm font-medium text-blue-800">{pending.length} demande{pending.length > 1 ? 's' : ''} en cours</p>
+          {pending.slice(0, 3).map(r => (
+            <div key={`${r.type}-${r.id}`} className="flex items-center gap-2 mt-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+              <p className="text-xs text-blue-700">{r.title as string}</p>
             </div>
-          </div>
+          ))}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* ── Left col ── */}
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* Raccourcis */}
-          <div className="grid grid-cols-3 gap-3">
-            <Link to="/requests/new" className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 hover:border-blue-200 hover:shadow transition-all group text-center">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center mx-auto mb-2">
-                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
-              </div>
-              <p className="text-xs font-medium text-gray-700">Attestation</p>
-            </Link>
-            <Link to="/requests/new?type=LEAVE" className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 hover:border-purple-200 hover:shadow transition-all group text-center">
-              <div className="w-10 h-10 rounded-lg bg-purple-50 group-hover:bg-purple-100 flex items-center justify-center mx-auto mb-2">
-                <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
-              </div>
-              <p className="text-xs font-medium text-gray-700">Congé</p>
-            </Link>
-            <Link to="/requests/new?type=MISSION" className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 hover:border-teal-200 hover:shadow transition-all group text-center">
-              <div className="w-10 h-10 rounded-lg bg-teal-50 group-hover:bg-teal-100 flex items-center justify-center mx-auto mb-2">
-                <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>
-              </div>
-              <p className="text-xs font-medium text-gray-700">Mission</p>
-            </Link>
-          </div>
-
-          {/* Dernières demandes */}
-          <Card title="Mes dernières demandes" link="/requests">
-            {requests.length === 0
-              ? <Empty text="Aucune demande pour le moment." />
-              : requests.slice(0, 5).map(r => (
-                <Row key={`${r.type}-${r.id}`} badge={r.type as string} main={r.title as string} status={r.status as string} sub={(r.created_at as string)?.slice(0, 10)} />
-              ))}
-          </Card>
-
-          {/* Soldes de congés */}
-          {balances.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-800">Soldes de congés</h3>
-                <Link to="/leaves" className="text-xs text-blue-600 hover:underline">Voir tout</Link>
-              </div>
-              <div className="p-4 grid grid-cols-2 gap-3">
-                {(balances as R[]).slice(0, 4).map((b, i) => (
-                  <div key={i} className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 truncate">{b.leave_type_name as string}</p>
-                    <div className="flex items-end gap-1 mt-1">
-                      <span className="text-lg font-bold text-gray-900">{b.remaining_days as number}</span>
-                      <span className="text-xs text-gray-400 mb-0.5">/ {b.total_days as number}j</span>
-                    </div>
-                    <div className="mt-1.5 h-1 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 rounded-full"
-                        style={{ width: `${Math.min(100, (Number(b.remaining_days) / Number(b.total_days)) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Right col ── */}
-        <div className="space-y-6">
-
-          {/* Profile */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-[#0f172a] flex items-center justify-center text-white font-bold flex-shrink-0">
-                {user?.first_name?.[0]}{user?.last_name?.[0]}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">{user?.first_name} {user?.last_name}</p>
-                <p className="text-xs text-gray-400">{ROLE_LABELS[user?.role as keyof typeof ROLE_LABELS] ?? user?.role}</p>
-              </div>
-            </div>
-            <Link to="/profile" className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              Voir mon profil
-            </Link>
-          </div>
-
-          {/* Missions actives */}
-          {activeMissions.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-800">Missions actives</h3>
-                <Link to="/missions" className="text-xs text-blue-600 hover:underline">Tout voir</Link>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {activeMissions.slice(0, 3).map(m => (
-                  <div key={m.id as string} className="px-5 py-3">
-                    <p className="text-xs font-medium text-gray-800 truncate">{m.title as string}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{m.destination as string} · {(m.start_date as string)?.slice(0, 10)}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Calendrier */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-800">Calendrier</h3>
-              <p className="text-[11px] text-gray-400 mt-0.5">Congés et missions ce mois</p>
-            </div>
-            <div className="p-4">
-              <MiniCalendar leaves={leaves} missions={missions} />
-            </div>
-          </div>
-
-          {/* Congés en attente */}
-          {pendingLeaves.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <p className="text-xs font-semibold text-amber-800 mb-2">{pendingLeaves.length} congé{pendingLeaves.length > 1 ? 's' : ''} en attente</p>
-              {pendingLeaves.slice(0, 2).map((l, i) => (
-                <div key={i} className="flex items-center gap-2 mt-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                  <p className="text-xs text-amber-700 truncate">{(l.start_date as string)?.slice(0, 10)} → {(l.end_date as string)?.slice(0, 10)}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* Action cards grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <ActionCard to="/requests/new" title="Nouvelle demande" desc="Attestation, conge ou mission" icon="plus" />
+        <ActionCard to="/missions" title="Mes missions" desc="Deplacements academiques" icon="plane" />
       </div>
+
+      {/* Recent requests */}
+      <Card title="Mes demandes" link="/requests">
+        {requests.length === 0 ? <Empty text="Vous n'avez pas encore fait de demande. Utilisez les raccourcis ci-dessus." /> : requests.slice(0, 6).map(r => (
+          <Row key={`${r.type}-${r.id}`} badge={r.type as string} main={r.title as string} status={r.status as string} sub={(r.created_at as string)?.slice(0, 10)} />
+        ))}
+      </Card>
     </div>
   );
 }
@@ -661,278 +291,49 @@ function EmployeeView() {
    STUDENT
    ═════════════════════════════════════ */
 function StudentView() {
-  const { user } = useAuth();
   const [requests, setRequests] = useState<R[]>([]);
-  const [notifs, setNotifs]     = useState<R[]>([]);
-
-  useEffect(() => {
-    getMyRequests().then(r => {
-      const data = r.data as R;
-      setRequests((data.results ?? data) as R[]);
-    }).catch(() => {});
-    getNotifications({ page_size: '5' }).then(r => {
-      const data = r.data as R;
-      setNotifs((data.results ?? data) as R[]);
-    }).catch(() => {});
-  }, []);
-
-  const pending  = requests.filter(r => r.status === 'PENDING');
-  const approved = requests.filter(r => r.status === 'APPROVED');
-  const rejected = requests.filter(r => r.status === 'REJECTED');
-
-  const quickCerts = [
-    { label: 'Attestation de scolarité',  type: 'SCOLARITE' },
-    { label: 'Attestation d\'inscription', type: 'INSCRIPTION' },
-    { label: 'Attestation de réussite',   type: 'REUSSITE' },
-    { label: 'Attestation de stage',      type: 'STAGE' },
-  ];
+  useEffect(() => { getMyRequests().then(r => setRequests(r.data as R[])).catch(() => {}); }, []);
+  const pending = requests.filter(r => r.status === 'PENDING');
 
   return (
     <div className="space-y-6">
-
-      {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-          <p className="text-xs text-gray-500">Total</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{requests.length}</p>
-          <p className="text-[11px] text-gray-400 mt-0.5">demandes</p>
-        </div>
-        <div className="bg-white rounded-lg border border-amber-100 shadow-sm p-4">
-          <p className="text-xs text-gray-500">En attente</p>
-          <p className="text-2xl font-bold text-amber-500 mt-1">{pending.length}</p>
-          <p className="text-[11px] text-gray-400 mt-0.5">en traitement</p>
-        </div>
-        <div className="bg-white rounded-lg border border-green-100 shadow-sm p-4">
-          <p className="text-xs text-gray-500">Approuvées</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{approved.length}</p>
-          <p className="text-[11px] text-gray-400 mt-0.5">traitées</p>
-        </div>
-        <div className="bg-white rounded-lg border border-red-100 shadow-sm p-4">
-          <p className="text-xs text-gray-500">Rejetées</p>
-          <p className="text-2xl font-bold text-red-500 mt-1">{rejected.length}</p>
-          <p className="text-[11px] text-gray-400 mt-0.5">non accordées</p>
-        </div>
-      </div>
-
-      {/* ── Pending banner ── */}
-      {pending.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-5 py-4">
-          <p className="text-sm font-medium text-amber-800 mb-2">
-            {pending.length} demande{pending.length > 1 ? 's' : ''} en cours de traitement
-          </p>
+      {/* Pending tracker */}
+      {pending.length > 0 ? (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm font-medium text-blue-800">Vos demandes en cours de traitement :</p>
           {pending.map(r => (
             <div key={`${r.type}-${r.id}`} className="flex items-center gap-2 mt-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
-              <p className="text-xs text-amber-700 truncate">{r.title as string}</p>
-              <span className="text-[10px] text-amber-500 ml-auto flex-shrink-0">{(r.created_at as string)?.slice(0, 10)}</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+              <p className="text-xs text-blue-700">{r.title as string}</p>
             </div>
           ))}
         </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* ── Left: history + quick certs ── */}
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* Quick cert buttons */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-800">Demander une attestation</h3>
-              <p className="text-[11px] text-gray-400 mt-0.5">Choisissez le type de document</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 p-4">
-              {quickCerts.map(c => (
-                <Link
-                  key={c.type}
-                  to={`/requests/new?type=${c.type}`}
-                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all group"
-                >
-                  <div className="w-7 h-7 rounded-md bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                    </svg>
-                  </div>
-                  <p className="text-xs font-medium text-gray-700 group-hover:text-blue-700 leading-tight">{c.label}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* History */}
-          <Card title="Historique des demandes" link="/requests">
-            {requests.length === 0
-              ? <Empty text="Aucune demande pour le moment." />
-              : requests.slice(0, 6).map(r => (
-                <Row key={`${r.type}-${r.id}`} main={r.title as string} status={r.status as string} sub={(r.created_at as string)?.slice(0, 10)} />
-              ))
-            }
-          </Card>
+      ) : requests.length > 0 ? (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+          <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          <p className="text-sm text-green-700">Toutes vos demandes ont ete traitees.</p>
         </div>
+      ) : null}
 
-        {/* ── Right: profile info + notifications ── */}
-        <div className="space-y-6">
-
-          {/* Profile card */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-[#0f172a] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                {user?.first_name?.[0]}{user?.last_name?.[0]}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">{user?.first_name} {user?.last_name}</p>
-                <p className="text-xs text-gray-400">Étudiant</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-500">Email</span>
-                <span className="text-gray-700 truncate ml-2">{user?.email}</span>
-              </div>
-            </div>
-            <Link to="/profile" className="mt-4 w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              Voir mon profil
-            </Link>
-          </div>
-
-          {/* Notifications */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-800">Notifications</h3>
-              <Link to="/notifications" className="text-xs text-blue-600 hover:underline">Tout voir</Link>
-            </div>
-            {notifs.length === 0 ? (
-              <div className="p-5 text-center text-xs text-gray-400">Aucune notification</div>
-            ) : (
-              <div className="divide-y divide-gray-50">
-                {notifs.map(n => (
-                  <div
-                    key={n.id as string}
-                    onClick={() => markAsRead(n.id as string).catch(() => {})}
-                    className={`px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      !n.is_read ? 'bg-blue-50/40' : ''
-                    }`}
-                  >
-                    <div className="flex items-start gap-2">
-                      {!n.is_read && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />}
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-gray-800 truncate">{n.title as string}</p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">{(n.created_at as string)?.slice(0, 10)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+      {/* Main action */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 text-center">
+        <div className="w-12 h-12 mx-auto bg-blue-50 rounded-full flex items-center justify-center mb-3">
+          <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
         </div>
-      </div>
-    </div>
-  );
-}
-
-/* ═════════════════════════════════════
-   MINI CALENDAR
-   ═════════════════════════════════════ */
-function MiniCalendar({ leaves, missions }: { leaves: R[]; missions: R[] }) {
-  const today = new Date();
-  const [current, setCurrent] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
-
-  const year  = current.getFullYear();
-  const month = current.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDay = new Date(year, month, 1).getDay();
-  const offset = firstDay === 0 ? 6 : firstDay - 1;
-
-  const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-  const DAYS_FR   = ['L','M','M','J','V','S','D'];
-
-  const isInRange = (day: number, start: string, end: string) => {
-    const d = new Date(year, month, day);
-    return d >= new Date(start) && d <= new Date(end);
-  };
-
-  const getEvents = (day: number) => {
-    const events: { type: 'leave' | 'mission'; label: string }[] = [];
-    leaves.forEach(l => {
-      if (l.start_date && l.end_date && isInRange(day, l.start_date as string, l.end_date as string))
-        events.push({ type: 'leave', label: 'Congé' });
-    });
-    missions.forEach(m => {
-      if (m.start_date && m.end_date && isInRange(day, m.start_date as string, m.end_date as string))
-        events.push({ type: 'mission', label: 'Mission' });
-    });
-    return events;
-  };
-
-  const cells = Array.from({ length: offset + daysInMonth }, (_, i) =>
-    i < offset ? null : i - offset + 1
-  );
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <button onClick={() => setCurrent(new Date(year, month - 1, 1))}
-          className="w-5 h-5 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 text-xs">
-          ‹
-        </button>
-        <p className="text-[11px] font-semibold text-gray-700">{MONTHS_FR[month]} {year}</p>
-        <button onClick={() => setCurrent(new Date(year, month + 1, 1))}
-          className="w-5 h-5 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 text-xs">
-          ›
-        </button>
+        <h3 className="text-sm font-semibold text-gray-800">Demander une attestation</h3>
+        <p className="text-xs text-gray-500 mt-1 mb-4">Scolarite, inscription, reussite, bourse, stage...</p>
+        <Link to="/requests/new" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0f172a] rounded-lg hover:bg-[#1e293b]">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+          Nouvelle demande
+        </Link>
       </div>
 
-      {/* Day headers */}
-      <div className="grid grid-cols-7 mb-0.5">
-        {DAYS_FR.map((d, i) => (
-          <div key={i} className="text-center text-[9px] font-medium text-gray-400 py-0.5">{d}</div>
+      {/* History */}
+      <Card title="Historique" link="/requests">
+        {requests.length === 0 ? <Empty text="Aucune demande pour le moment." /> : requests.slice(0, 5).map(r => (
+          <Row key={`${r.type}-${r.id}`} main={r.title as string} status={r.status as string} sub={(r.created_at as string)?.slice(0, 10)} />
         ))}
-      </div>
-
-      {/* Days grid */}
-      <div className="grid grid-cols-7 gap-y-0.5">
-        {cells.map((day, i) => {
-          if (!day) return <div key={i} />;
-          const events = getEvents(day);
-          const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-          const hasLeave   = events.some(e => e.type === 'leave');
-          const hasMission = events.some(e => e.type === 'mission');
-          return (
-            <div key={i} className="flex flex-col items-center">
-              <div className={`w-6 h-6 flex items-center justify-center rounded-full text-[10px] font-medium
-                ${ isToday ? 'bg-[#0f172a] text-white' :
-                   hasLeave ? 'bg-purple-100 text-purple-700' :
-                   hasMission ? 'bg-teal-100 text-teal-700' :
-                   'text-gray-600 hover:bg-gray-100' }`}>
-                {day}
-              </div>
-              {(hasLeave || hasMission) && (
-                <div className="flex gap-0.5 mt-0.5">
-                  {hasLeave   && <div className="w-1 h-1 rounded-full bg-purple-400" />}
-                  {hasMission && <div className="w-1 h-1 rounded-full bg-teal-400" />}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Legend */}
-      <div className="flex gap-3 mt-2 pt-2 border-t border-gray-100">
-        <div className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-          <span className="text-[9px] text-gray-400">Congé</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-teal-400" />
-          <span className="text-[9px] text-gray-400">Mission</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
-          <span className="text-[9px] text-gray-400">Aujourd'hui</span>
-        </div>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -942,7 +343,7 @@ function MiniCalendar({ leaves, missions }: { leaves: R[]; missions: R[] }) {
    ═════════════════════════════════════ */
 
 /* Stat card for admin -- shows pending/total with icon */
-function StatCard({ label, pending, total, color }: { icon?: string; label: string; pending: number; total: number; color: string }) {
+function StatCard({ icon, label, pending, total, color }: { icon: string; label: string; pending: number; total: number; color: string }) {
   const colors: Record<string, { bg: string; text: string; ring: string }> = {
     blue: { bg: 'bg-blue-50', text: 'text-blue-600', ring: 'ring-blue-100' },
     purple: { bg: 'bg-purple-50', text: 'text-purple-600', ring: 'ring-purple-100' },
@@ -962,6 +363,35 @@ function StatCard({ label, pending, total, color }: { icon?: string; label: stri
         </div>
       </div>
     </div>
+  );
+}
+
+/* Simple stat card */
+function SC({ label, value, accent }: { label: string; value: number; accent?: string }) {
+  const ac: Record<string, string> = { amber: 'text-amber-600', green: 'text-green-600' };
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
+      <p className={`text-2xl font-bold mt-1 ${accent ? ac[accent] : 'text-gray-900'}`}>{value}</p>
+    </div>
+  );
+}
+
+/* Action card -- clickable card with icon, title, description */
+function ActionCard({ to, title, desc, icon }: { to: string; title: string; desc: string; icon: string }) {
+  const icons: Record<string, React.ReactNode> = {
+    plus: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>,
+    cal: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>,
+    plane: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>,
+  };
+  return (
+    <Link to={to} className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 hover:border-gray-300 hover:shadow transition-all group">
+      <div className="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 group-hover:text-[#0f172a] group-hover:bg-gray-100 transition-colors mb-3">
+        {icons[icon]}
+      </div>
+      <p className="text-sm font-medium text-gray-800">{title}</p>
+      <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+    </Link>
   );
 }
 

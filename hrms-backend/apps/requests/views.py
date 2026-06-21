@@ -65,35 +65,16 @@ def _normalize_document(r):
     DocumentRequest.status values: PENDING, APPROVED, REJECTED, GENERATED
     We map GENERATED → APPROVED since from the user's perspective it's approved.
     """
-    is_free = r.template is None
-    subject = (r.extra_data or {}).get('subject', '') if is_free else ''
-    attachment_url = ''
-    if r.attachment:
-        try:
-            from django.conf import settings
-            url = r.attachment.url
-            # Make absolute if it's a relative path
-            if url and not url.startswith('http'):
-                host = getattr(settings, 'MEDIA_HOST', 'http://localhost:8000')
-                attachment_url = host.rstrip('/') + url
-            else:
-                attachment_url = url
-        except Exception:
-            pass
     return {
         'id': str(r.id),
-        'type': 'FREE' if is_free else 'CERTIFICATE',
-        'type_label': 'Demande libre' if is_free else 'Attestation',
-        'title': subject or r.message[:60] if is_free else (r.template.name if r.template else 'Document'),
+        'type': 'CERTIFICATE',
+        'type_label': 'Attestation',
+        'title': r.template.name if r.template else 'Document',
         'status': 'APPROVED' if r.status == 'GENERATED' else r.status,
         'user_id': str(r.requested_by_id),
         'user_name': r.requested_by.get_full_name(),
         'created_at': r.created_at.isoformat(),
         'has_pdf': r.generated_documents.exists(),
-        'has_signed_document': bool(r.signed_document),
-        'attachment_url': attachment_url,
-        'note': r.message or '',
-        'subject': subject,
         'details': {
             'template_name': r.template.name if r.template else '',
         },
@@ -124,8 +105,6 @@ def _normalize_leave(r):
         'user_id': str(r.employee.user_id),
         'user_name': r.employee.full_name,
         'created_at': r.created_at.isoformat(),
-        'note': r.reason or '',
-        'subject': '',
         'details': {
             'leave_type': r.leave_type.name,
             'start_date': str(r.start_date),
@@ -159,8 +138,6 @@ def _normalize_mission(r):
         'user_id': str(r.employee.user_id),
         'user_name': r.employee.full_name,
         'created_at': r.created_at.isoformat(),
-        'note': r.description or '',
-        'subject': '',
         'details': {
             'destination': r.destination,
             'start_date': str(r.start_date),
@@ -250,14 +227,11 @@ class AllRequestsView(APIView):
     Same normalization and filtering as MyRequestsView.
     Used by the "Toutes les demandes" page.
     """
-    permission_classes = [IsAdminHR]  # IsAdminHR already includes SUPER_ADMIN
+    permission_classes = [IsAdminHR]
 
     def get(self, request):
         # Fetch everything (no user filter)
-        # prefetch_related('generated_documents') avoids N+1 queries in _normalize_document
-        docs = DocumentRequest.objects.select_related(
-            'template', 'requested_by'
-        ).prefetch_related('generated_documents').all()
+        docs = DocumentRequest.objects.select_related('template', 'requested_by').all()
         leaves = LeaveRequest.objects.select_related('leave_type', 'employee__user').all()
         missions = Mission.objects.select_related('employee__user').all()
 
@@ -293,8 +267,27 @@ class UnifiedReviewView(APIView):
 
     HR-only endpoint to approve or reject ANY request type from the
     unified "Toutes les demandes" page.
+
+    Request body:
+      {
+        "id": "uuid-of-the-request",
+        "type": "CERTIFICATE" | "LEAVE" | "MISSION",
+        "action": "approve" | "reject",
+        "reason": "optional rejection reason"
+      }
+
+    How it works:
+      1. Read the type to know which model to query
+      2. Fetch the record by ID
+      3. Apply the approve/reject action using each type's native status
+      4. Return a success/error response
+
+    Why a unified endpoint?
+      So the frontend can approve/reject from one table without knowing
+      which backend module the request belongs to. The frontend sends
+      (type + id + action) and this view routes it to the right model.
     """
-    permission_classes = [IsAdminHR]  # IsAdminHR already includes SUPER_ADMIN
+    permission_classes = [IsAdminHR]
 
     def post(self, request):
         req_type = request.data.get('type')
@@ -316,7 +309,7 @@ class UnifiedReviewView(APIView):
 
         # --- Route to the correct model based on type ---
         try:
-            if req_type in ('CERTIFICATE', 'FREE'):
+            if req_type == 'CERTIFICATE':
                 return self._review_certificate(req_id, action, reason, request.user)
             elif req_type == 'LEAVE':
                 return self._review_leave(req_id, action, reason, request.user)
@@ -335,56 +328,27 @@ class UnifiedReviewView(APIView):
 
     def _review_certificate(self, req_id, action, reason, reviewer):
         """
-        Approve or reject a DocumentRequest (certificate/attestation or free request).
-        Approval sets status to APPROVED and auto-generates the PDF (if template exists).
+        Approve or reject a DocumentRequest (certificate/attestation).
+        Approval sets status to APPROVED and auto-generates the PDF.
         """
         from apps.certificates.pdf_service import generate_pdf
-        from apps.notifications.services import NotificationService
         obj = DocumentRequest.objects.select_related('template', 'requested_by').get(id=req_id)
         if obj.status not in ('PENDING',):
             return Response({'detail': 'Cette demande a deja ete traitee.'}, status=http_status.HTTP_400_BAD_REQUEST)
-
-        is_free = obj.template is None
-        subject = (obj.extra_data or {}).get('subject', '') if is_free else (obj.template.name if obj.template else 'Document')
 
         obj.reviewed_by = reviewer
         obj.reviewed_at = timezone.now()
         if action == 'approve':
             obj.status = 'APPROVED'
             obj.save()
-            if not is_free:
-                try:
-                    generate_pdf(obj, generated_by=reviewer)
-                except Exception:
-                    pass
             try:
-                NotificationService.create_notification(
-                    recipient=obj.requested_by,
-                    notification_type='DOCUMENT_APPROVED',
-                    title='Demande approuvée',
-                    message=f'Votre demande "{subject}" a été approuvée.',
-                    action_url='/requests',
-                    related_object_type='document_request',
-                    related_object_id=str(obj.id),
-                )
+                generate_pdf(obj, generated_by=reviewer)
             except Exception:
                 pass
         else:
             obj.status = 'REJECTED'
             obj.rejection_reason = reason
             obj.save()
-            try:
-                NotificationService.create_notification(
-                    recipient=obj.requested_by,
-                    notification_type='DOCUMENT_REJECTED',
-                    title='Demande rejetée',
-                    message=f'Votre demande "{subject}" a été rejetée. Raison: {reason or "Non spécifiée"}',
-                    action_url='/requests',
-                    related_object_type='document_request',
-                    related_object_id=str(obj.id),
-                )
-            except Exception:
-                pass
         return Response({'detail': 'OK', 'status': obj.status})
 
     def _review_leave(self, req_id, action, reason, reviewer):
@@ -394,122 +358,35 @@ class UnifiedReviewView(APIView):
         When HR rejects, it sets status to REJECTED.
         """
         from apps.leaves.services import LeaveService
-        from apps.notifications.services import NotificationService
 
-        obj = LeaveRequest.objects.select_related('employee__user', 'leave_type').get(id=req_id)
+        obj = LeaveRequest.objects.get(id=req_id)
         if obj.status not in ('PENDING', 'DEPT_APPROVED'):
             return Response({'detail': 'Cette demande a deja ete traitee.'}, status=http_status.HTTP_400_BAD_REQUEST)
 
         if action == 'approve':
+            # If still pending dept approval, skip to HR approval directly
             if obj.status == 'PENDING':
                 LeaveService.approve_by_department_head(obj, reviewer, 'Approuve directement par RH')
             LeaveService.approve_by_hr(obj, reviewer, reason)
-            try:
-                NotificationService.create_notification(
-                    recipient=obj.employee.user,
-                    notification_type='LEAVE_APPROVED',
-                    title='Congé approuvé',
-                    message=f'Votre demande de congé ({obj.leave_type.name}) du {obj.start_date} au {obj.end_date} a été approuvée.',
-                    action_url='/requests',
-                )
-            except Exception:
-                pass
         else:
             LeaveService.reject(obj, reviewer, reason)
-            try:
-                NotificationService.create_notification(
-                    recipient=obj.employee.user,
-                    notification_type='LEAVE_REJECTED',
-                    title='Congé rejeté',
-                    message=f'Votre demande de congé ({obj.leave_type.name}) a été rejetée. Raison: {reason or "Non spécifiée"}',
-                    action_url='/requests',
-                )
-            except Exception:
-                pass
         return Response({'detail': 'OK', 'status': obj.status})
 
     def _review_mission(self, req_id, action, reason, reviewer):
         """
         Approve or reject a Mission.
-        On approval: generate the Ordre de Mission PDF and notify the professor.
-        On rejection: set status to CANCELLED.
+        Approval sets status to APPROVED. Rejection sets it to CANCELLED.
         """
-        from apps.notifications.services import NotificationService
-        obj = Mission.objects.select_related('employee__user').get(id=req_id)
+        obj = Mission.objects.get(id=req_id)
         if obj.status != 'PLANNED':
             return Response({'detail': 'Cette mission a deja ete traitee.'}, status=http_status.HTTP_400_BAD_REQUEST)
 
         if action == 'approve':
             obj.status = 'APPROVED'
             obj.approved_by = reviewer
-            obj.save()
-
-            # Generate Ordre de Mission PDF and send to professor
-            try:
-                from apps.certificates.models import DocumentTemplate, DocumentRequest
-                from apps.certificates.pdf_service import generate_pdf
-
-                template = DocumentTemplate.objects.filter(
-                    category='ORDRE_MISSION', is_active=True
-                ).first()
-
-                if template and hasattr(obj.employee, 'user'):
-                    prof_user = obj.employee.user
-                    # Create a DocumentRequest for this mission
-                    doc_req = DocumentRequest.objects.create(
-                        requested_by=prof_user,
-                        template=template,
-                        status=DocumentRequest.Status.APPROVED,
-                        reviewed_by=reviewer,
-                        reviewed_at=timezone.now(),
-                        extra_data={
-                            'destination': obj.destination,
-                            'date_depart': str(obj.start_date),
-                            'date_retour': str(obj.end_date),
-                            'objet_mission': obj.title,
-                            'evenement': obj.description or obj.title,
-                            'moyen_transport': '',
-                            'accompagnants': '',
-                            'indice': '',
-                        },
-                        message=f'Ordre de mission généré automatiquement lors de l\'approbation de la mission "{obj.title}".',
-                    )
-                    generate_pdf(doc_req, generated_by=reviewer)
-
-                    NotificationService.create_notification(
-                        recipient=prof_user,
-                        notification_type='DOCUMENT_APPROVED',
-                        title='Ordre de mission approuvé',
-                        message=f'Votre mission "{obj.title}" vers {obj.destination} a été approuvée. L\'ordre de mission est disponible au téléchargement.',
-                        action_url='/requests',
-                        related_object_type='document_request',
-                        related_object_id=str(doc_req.id),
-                    )
-            except Exception:
-                # Notification fallback if PDF generation fails
-                try:
-                    NotificationService.create_notification(
-                        recipient=obj.employee.user,
-                        notification_type='DOCUMENT_APPROVED',
-                        title='Mission approuvée',
-                        message=f'Votre mission "{obj.title}" vers {obj.destination} a été approuvée.',
-                        action_url='/requests',
-                    )
-                except Exception:
-                    pass
         else:
             obj.status = 'CANCELLED'
-            obj.save()
-            try:
-                NotificationService.create_notification(
-                    recipient=obj.employee.user,
-                    notification_type='LEAVE_REJECTED',
-                    title='Mission rejetée',
-                    message=f'Votre mission "{obj.title}" vers {obj.destination} a été rejetée. Raison: {reason or "Non spécifiée"}',
-                    action_url='/requests',
-                )
-            except Exception:
-                pass
+        obj.save()
         return Response({'detail': 'OK', 'status': obj.status})
 
 
@@ -520,9 +397,22 @@ class UnifiedReviewView(APIView):
 class RequestStatsView(APIView):
     """
     GET /api/v1/requests/stats/
+
     HR-only endpoint returning counts across all request types.
+    Used by the admin dashboard to show stat cards.
+
+    Response format:
+    {
+      "total": 45,
+      "pending": 12,
+      "by_type": {
+        "certificates": { "total": 20, "pending": 5 },
+        "leaves": { "total": 15, "pending": 4 },
+        "missions": { "total": 10, "pending": 3 }
+      }
+    }
     """
-    permission_classes = [IsAdminHR]  # IsAdminHR already includes SUPER_ADMIN
+    permission_classes = [IsAdminHR]
 
     def get(self, request):
         # Count each type separately

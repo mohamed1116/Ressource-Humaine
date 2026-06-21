@@ -5,7 +5,7 @@ export interface User {
   first_name: string;
   last_name: string;
   full_name: string;
-  role: 'SUPER_ADMIN' | 'ADMIN_HR' | 'DEPARTMENT_HEAD' | 'PROFESSOR' | 'STAFF' | 'STUDENT';
+  role: 'ADMIN_HR' | 'DEPARTMENT_HEAD' | 'PROFESSOR' | 'STAFF' | 'STUDENT';
   phone: string;
   avatar: string | null;
   is_active: boolean;

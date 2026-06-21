@@ -25,9 +25,9 @@ export default function MyLeavesPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Mes congés</h1>
-        <Link to="/requests/new?type=LEAVE" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-          + Demande de congé
+        <h1 className="text-2xl font-bold text-gray-900">My Leaves</h1>
+        <Link to="/leaves/request" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+          + New Request
         </Link>
       </div>
 
@@ -38,7 +38,7 @@ export default function MyLeavesPage() {
             <div key={b.id as string} className="bg-white rounded-lg border p-4">
               <p className="text-sm text-gray-500">{b.leave_type_name as string}</p>
               <p className="text-2xl font-bold text-gray-900">{b.remaining_days as string}</p>
-              <p className="text-xs text-gray-400">sur {b.total_days as string} jours</p>
+              <p className="text-xs text-gray-400">of {b.total_days as string} days</p>
             </div>
           ))}
         </div>
@@ -47,16 +47,16 @@ export default function MyLeavesPage() {
       {/* Leave Requests */}
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Chargement...</div>
+          <div className="p-8 text-center text-gray-500">Loading...</div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-6 py-3 text-left font-medium text-gray-500">Type</th>
-                <th className="px-6 py-3 text-left font-medium text-gray-500">Du</th>
-                <th className="px-6 py-3 text-left font-medium text-gray-500">Au</th>
-                <th className="px-6 py-3 text-left font-medium text-gray-500">Jours</th>
-                <th className="px-6 py-3 text-left font-medium text-gray-500">Statut</th>
+                <th className="px-6 py-3 text-left font-medium text-gray-500">From</th>
+                <th className="px-6 py-3 text-left font-medium text-gray-500">To</th>
+                <th className="px-6 py-3 text-left font-medium text-gray-500">Days</th>
+                <th className="px-6 py-3 text-left font-medium text-gray-500">Status</th>
                 <th className="px-6 py-3 text-left font-medium text-gray-500">Date</th>
               </tr>
             </thead>
@@ -76,7 +76,7 @@ export default function MyLeavesPage() {
                 </tr>
               ))}
               {leaves.length === 0 && (
-                <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500">Aucune demande de congé pour le moment.</td></tr>
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500">No leave requests yet.</td></tr>
               )}
             </tbody>
           </table>
