@@ -97,6 +97,7 @@ npm run dev
 - 📈 AI-powered HR analytics and insights
 - 🏆 Promotion and evaluation management
 - 🗂️ Full audit logging of all actions
+- 🌐 Multi-language support (French & Arabic documents)
 
 ---
 
