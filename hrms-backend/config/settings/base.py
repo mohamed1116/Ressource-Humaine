@@ -91,7 +91,7 @@ DATABASES = {
 # Use custom User model with email as login identifier
 AUTH_USER_MODEL = 'accounts.User'
 
-# Password validation
+# Password validation rules - enforces complexity requirements
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
