@@ -214,6 +214,7 @@ class MessageReactionView(APIView):
             return Response({'detail': 'Non trouvé.'}, status=404)
 
 
+# Unread count view - returns number of unread messages for the authenticated user
 class UnreadCountView(APIView):
     permission_classes = [IsAuthenticated]
 
