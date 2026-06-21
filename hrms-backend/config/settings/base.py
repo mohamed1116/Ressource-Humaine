@@ -105,7 +105,7 @@ TIME_ZONE = 'Africa/Casablanca'
 USE_I18N = True
 USE_TZ = True
 
-# Static files
+# Static and media file serving configuration
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
