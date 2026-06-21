@@ -1,4 +1,5 @@
-# URL routing for accounts and authentication endpoints - login, register, profile
+# URL routing for accounts and authentication
+# Endpoints: login, logout, register, profile, password reset, user management
 from django.urls import path
 from . import views, superadmin_views, broadcast_views
 
