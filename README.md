@@ -61,7 +61,8 @@ A full-stack web application for managing human resources in an educational inst
 
 ## 🚀 Getting Started
 
-> Make sure Python 3.11+ and Node.js 18+ are installed before proceeding.
+> Make sure Python 3.11+ and Node.js 18+ are installed.
+> For PDF generation, WeasyPrint requires GTK libraries on Windows.
 
 ### Backend
 
