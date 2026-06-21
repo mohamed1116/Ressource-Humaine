@@ -1,4 +1,5 @@
-# Serializers for the internal messaging system - handles conversations and messages
+# Serializers for the internal messaging system
+# Handles conversations, messages, attachments, reactions and read receipts
 from rest_framework import serializers
 from apps.accounts.models import User
 from .models import Conversation, ConversationParticipant, Message, Attachment, MessageRead, MessageReaction
