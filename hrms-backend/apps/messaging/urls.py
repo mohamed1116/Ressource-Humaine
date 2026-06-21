@@ -1,3 +1,4 @@
+# URL routing for messaging system endpoints
 from django.urls import path
 from . import views
 

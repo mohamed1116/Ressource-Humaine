@@ -1,3 +1,4 @@
+# Serializers for the notification system
 from rest_framework import serializers
 from .models import Notification, NotificationPreference
 

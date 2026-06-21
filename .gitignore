@@ -1,27 +1,14 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-*.egg-info/
-dist/
-build/
-
-# Django
-*.sqlite3
+*.tar
+*.tar.*
+*.jar
+*.exe
+*.msi
+*.deb
+*.zip
+*.tgz
 *.log
-hrms-backend/.env
-hrms-backend/media/
-hrms-backend/staticfiles/
-hrms-backend/arabic_test.pdf
-hrms-backend/test_ar.pdf
+*.log.*
+*.sig
 
-# Node
-node_modules/
-hrms-frontend/dist/
-hrms-frontend/.env
-
-# OS
-.DS_Store
-Thumbs.db
+pkg/
+# src/

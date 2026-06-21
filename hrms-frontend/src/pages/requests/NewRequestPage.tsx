@@ -36,12 +36,12 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
 
 /* --- API imports for each request type --- */
-import { getTemplates, createDocumentRequest, createFreeRequest } from '../../api/certificates.api';
+import { getTemplates, createDocumentRequest } from '../../api/certificates.api';
 import { getLeaveTypes, createLeaveRequest } from '../../api/leaves.api';
 import { createMission } from '../../api/missions.api';
 
@@ -57,15 +57,7 @@ const REQUEST_TYPES = [
     desc: 'Demander une attestation administrative ou academique',
     color: 'border-blue-200 bg-blue-50 text-blue-800',
     activeColor: 'border-blue-500 bg-blue-50 ring-2 ring-blue-500',
-    roles: [],
-  },
-  {
-    id: 'FREE' as const,
-    label: 'Demande libre',
-    desc: 'Ecrire votre propre demande personnalisee',
-    color: 'border-amber-200 bg-amber-50 text-amber-800',
-    activeColor: 'border-amber-500 bg-amber-50 ring-2 ring-amber-500',
-    roles: ['STUDENT', 'PROFESSOR', 'STAFF', 'DEPARTMENT_HEAD'],
+    roles: [], // empty = all roles can see this
   },
   {
     id: 'LEAVE' as const,
@@ -85,12 +77,12 @@ const REQUEST_TYPES = [
   },
 ];
 
-type RequestType = 'CERTIFICATE' | 'LEAVE' | 'MISSION' | 'FREE';
+type RequestType = 'CERTIFICATE' | 'LEAVE' | 'MISSION';
 
 export default function NewRequestPage() {
   const { user } = useAuth();
-  const { isStudent: _isStudent } = usePermissions();
-  const [searchParams] = useSearchParams();
+  const { isStudent } = usePermissions();
+  const navigate = useNavigate();
 
   /* --- Which request type is currently selected --- */
   const [selectedType, setSelectedType] = useState<RequestType | null>(null);
@@ -100,19 +92,25 @@ export default function NewRequestPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
+  /**
+   * Filter the request types based on the user's role.
+   * Students can only request certificates (attestations).
+   * Employees (professors, staff, etc.) can request all 3 types.
+   */
   const availableTypes = REQUEST_TYPES.filter(
-    (t) => t.roles.length === 0 || (user && (t.roles as string[]).includes(user.role)),
+    (t) => t.roles.length === 0 || (user && t.roles.includes(user.role)),
   );
 
+  /**
+   * Auto-select the first available type when the page loads.
+   * This way the form is immediately visible instead of showing
+   * an empty state.
+   */
   useEffect(() => {
-    const typeFromUrl = searchParams.get('type') as RequestType | null;
-    if (typeFromUrl && REQUEST_TYPES.find(t => t.id === typeFromUrl)) {
-      setSelectedType(typeFromUrl);
-    } else if (availableTypes.length > 0 && !selectedType) {
+    if (availableTypes.length > 0 && !selectedType) {
       setSelectedType(availableTypes[0].id);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, availableTypes.length, selectedType]);
+  }, [availableTypes, selectedType]);
 
   /**
    * Success screen: shown after a request is submitted.
@@ -200,14 +198,6 @@ export default function NewRequestPage() {
             setError={setError}
           />
         )}
-        {selectedType === 'FREE' && (
-          <FreeRequestForm
-            loading={loading}
-            setLoading={setLoading}
-            setSuccess={setSuccess}
-            setError={setError}
-          />
-        )}
       </div>
     </div>
   );
@@ -231,42 +221,66 @@ interface FormProps {
 
 function CertificateForm({ loading, setLoading, setSuccess, setError }: FormProps) {
   const navigate = useNavigate();
-  const [templates, setTemplates] = useState<Record<string, unknown>[]>([]);
-  const [templateId, setTemplateId] = useState('');
-  const [selectedTpl, setSelectedTpl] = useState<Record<string, unknown> | null>(null);
-  const [extraData, setExtraData] = useState<Record<string, string>>({});
-  const [message, setMessage] = useState('');
-  const [attachment, setAttachment] = useState<File | null>(null);
 
+  /* List of available document templates loaded from the backend */
+  const [templates, setTemplates] = useState<Record<string, unknown>[]>([]);
+
+  /* The template the user selected */
+  const [templateId, setTemplateId] = useState('');
+
+  /* The currently selected template object (for reading its variables) */
+  const [selectedTpl, setSelectedTpl] = useState<Record<string, unknown> | null>(null);
+
+  /* Extra data entered by the user for manual variables */
+  const [extraData, setExtraData] = useState<Record<string, string>>({});
+
+  /* Optional message from the user */
+  const [message, setMessage] = useState('');
+
+  /**
+   * On mount, fetch all active templates from the backend.
+   * These are the document types HR has created (attestation de travail,
+   * attestation de salaire, ordre de mission, etc.)
+   */
   useEffect(() => {
     getTemplates()
       .then((r) => setTemplates(Array.isArray(r.data) ? r.data : r.data.results || []))
       .catch(() => {});
   }, []);
 
+  /**
+   * When the user selects a template, update selectedTpl.
+   * This triggers the manual fields to appear below.
+   */
   useEffect(() => {
     if (templateId) {
       const t = templates.find((t) => t.id === templateId);
       setSelectedTpl(t || null);
-      setExtraData({});
+      setExtraData({}); // reset manual fields when template changes
     }
   }, [templateId, templates]);
 
+  /**
+   * Extract manual variables from the selected template.
+   * "auto" variables are filled from the user's profile (name, CIN, etc.)
+   * "manual" variables require user input (salary, destination, etc.)
+   */
   const manualVars = selectedTpl
     ? ((selectedTpl.variables as Array<{ key: string; label: string; type: string }>) || [])
         .filter((v) => v.type === 'manual')
     : [];
 
+  /**
+   * Submit handler: creates a DocumentRequest via the certificates API.
+   * The backend links this to the selected template and fills auto variables.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!templateId) {
-      setError('Veuillez selectionner un type de document.');
-      return;
-    }
+    if (!templateId) { setError('Veuillez selectionner un type de document.'); return; }
     setLoading(true);
     setError('');
     try {
-      await createDocumentRequest({ template: templateId, extra_data: extraData, message, attachment });
+      await createDocumentRequest({ template: templateId, extra_data: extraData, message });
       setSuccess(true);
       setTimeout(() => navigate('/requests'), 2500);
     } catch {
@@ -297,7 +311,7 @@ function CertificateForm({ loading, setLoading, setSuccess, setError }: FormProp
         </select>
       </div>
 
-      {/* Dynamic manual fields */}
+      {/* Dynamic manual fields (only shown when a template with manual vars is selected) */}
       {manualVars.length > 0 && (
         <div className="p-5 border-b border-gray-100 space-y-3">
           <p className="text-xs text-gray-500 mb-1">Informations complementaires requises :</p>
@@ -315,7 +329,7 @@ function CertificateForm({ loading, setLoading, setSuccess, setError }: FormProp
         </div>
       )}
 
-      {/* Note */}
+      {/* Optional message */}
       <div className="p-5 border-b border-gray-100">
         <label className="block text-xs font-medium text-gray-600 mb-1.5">Note (optionnel)</label>
         <textarea
@@ -391,14 +405,8 @@ function LeaveForm({ loading, setLoading, setSuccess, setError }: FormProps) {
       });
       setSuccess(true);
       setTimeout(() => navigate('/requests'), 2500);
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: Record<string, unknown> } };
-      const data = e?.response?.data;
-      const msg = data?.detail
-        || (data?.non_field_errors as string[])?.[0]
-        || Object.values(data || {}).flat().join(' ')
-        || 'Erreur lors de la soumission.';
-      setError(String(msg));
+    } catch {
+      setError('Erreur lors de la soumission. Verifiez votre solde de conges.');
     } finally {
       setLoading(false);
     }
@@ -485,6 +493,7 @@ function LeaveForm({ loading, setLoading, setSuccess, setError }: FormProps) {
 
 function MissionForm({ loading, setLoading, setSuccess, setError }: FormProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   /* Form state */
   const [title, setTitle] = useState('');
@@ -582,91 +591,6 @@ function MissionForm({ loading, setLoading, setSuccess, setError }: FormProps) {
       </div>
 
       {/* Submit */}
-      <div className="p-5 flex justify-end">
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-5 py-2 text-sm font-medium text-white bg-[#0f172a] rounded-lg hover:bg-[#1e293b] disabled:opacity-50 transition-colors"
-        >
-          {loading ? 'Envoi en cours...' : 'Soumettre la demande'}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-
-/* =====================================================================
-   SUB-FORM: FREE REQUEST (Demande libre)
-   Only visible to students. Lets them write a custom request.
-   ===================================================================== */
-
-function FreeRequestForm({ loading, setLoading, setSuccess, setError }: FormProps) {
-  const navigate = useNavigate();
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
-  const [attachment, setAttachment] = useState<File | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!subject.trim() || !message.trim()) {
-      setError('Veuillez remplir tous les champs.');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      await createFreeRequest({ subject: subject.trim(), message: message.trim(), attachment });
-      setSuccess(true);
-      setTimeout(() => navigate('/requests'), 2500);
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: Record<string, unknown> } };
-      const data = e?.response?.data;
-      const msg = (data?.detail as string) || Object.values(data || {}).flat().join(' ') || 'Erreur lors de la soumission.';
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <div className="p-5 border-b border-gray-100">
-        <label className="block text-xs font-medium text-gray-600 mb-1.5">Objet de la demande *</label>
-        <input
-          value={subject}
-          onChange={e => setSubject(e.target.value)}
-          required
-          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-amber-500"
-          placeholder="Ex: Demande de certificat de résidence..."
-        />
-      </div>
-      <div className="p-5 border-b border-gray-100">
-        <label className="block text-xs font-medium text-gray-600 mb-1.5">Votre demande *</label>
-        <textarea
-          value={message}
-          onChange={e => setMessage(e.target.value)}
-          rows={5}
-          required
-          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none resize-none focus:ring-1 focus:ring-amber-500"
-          placeholder="Décrivez votre demande en détail..."
-        />
-      </div>
-      <div className="p-5 border-b border-gray-100">
-        <label className="block text-xs font-medium text-gray-600 mb-1.5">Pièce jointe (optionnel)</label>
-        <input
-          type="file"
-          onChange={e => setAttachment(e.target.files?.[0] || null)}
-          className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer"
-        />
-        {attachment && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-            <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-            <span className="flex-1 truncate">{attachment.name}</span>
-            <button type="button" onClick={() => setAttachment(null)} className="text-red-400 hover:text-red-600">✕</button>
-          </div>
-        )}
-      </div>
       <div className="p-5 flex justify-end">
         <button
           type="submit"

@@ -1,8 +1,7 @@
 # Comptes Utilisateurs - SGRH FPT
 
 ---
-## SuperAdmin 
-superadmin@fpt.ac.ma // super123456
+
 ## Admin / HR
 | Nom | Email | Mot de passe |
 |-----|-------|--------------|
@@ -66,7 +65,6 @@ superadmin@fpt.ac.ma // super123456
 ## Student
 | Nom | Email | Mot de passe |
 |-----|-------|--------------|
-student@etu.fpt.ac.ma // student123456
 | Youssef EL MASSI | youssef.elmassi@etu.fpt.ac.ma | student123456 |
 | Karim BOUZID | karim.bouzid@etu.fpt.ac.ma | student123456 |
 | Sara AMRANI | sara.amrani@etu.fpt.ac.ma | student123456 |
