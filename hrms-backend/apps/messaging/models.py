@@ -92,6 +92,7 @@ class Attachment(TimeStampedModel):
         return f'{self.file_size // (1024 * 1024)} MB'
 
 
+# Tracks which users have read which messages - enables read receipts
 class MessageRead(models.Model):
     message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='reads')
     user    = models.ForeignKey('accounts.User', on_delete=models.CASCADE, related_name='message_reads')
