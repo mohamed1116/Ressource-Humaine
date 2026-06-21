@@ -1,4 +1,4 @@
-// Application entry point - bootstraps React with StrictMode
+// Application entry point - bootstraps React with StrictMode, QueryClient and Router
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles/globals.css'
