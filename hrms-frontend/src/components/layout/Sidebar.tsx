@@ -1,4 +1,5 @@
-// Sidebar - role-based navigation menu with dynamic menu items
+// Sidebar navigation - menu items filtered by user role
+// Supports SUPER_ADMIN, ADMIN_HR, DEPARTMENT_HEAD, PROFESSOR, STAFF, STUDENT
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ROLE_LABELS } from '../../hooks/usePermissions';
