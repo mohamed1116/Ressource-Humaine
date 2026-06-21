@@ -99,6 +99,13 @@ npm run dev
 
 ---
 
+## 🔑 Default Credentials
+
+Run `python manage.py seed_fpt_data` to load test data.
+See `COMPTES.md` for all accounts.
+
+---
+
 ## 🌐 API Base URL
 
 ```
