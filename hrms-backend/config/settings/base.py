@@ -88,7 +88,7 @@ DATABASES = {
     }
 }
 
-# Custom User Model
+# Use custom User model with email as login identifier
 AUTH_USER_MODEL = 'accounts.User'
 
 # Password validation
