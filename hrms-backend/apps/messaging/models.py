@@ -68,6 +68,7 @@ class Message(TimeStampedModel):
         return f'{self.sender} → {self.conversation_id}: {self.body[:40]}'
 
 
+# File attachments linked to messages with metadata and size tracking
 class Attachment(TimeStampedModel):
     id            = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     message       = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='attachments')
