@@ -37,6 +37,7 @@ class User(AbstractUser):
     def __str__(self):
         return f'{self.first_name} {self.last_name} ({self.email})'
 
+    # Role-based property helpers for use in views and permissions
     @property
     def is_super_admin(self):
         return self.role == self.Role.SUPER_ADMIN
