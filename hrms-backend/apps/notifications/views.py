@@ -69,6 +69,7 @@ class NotificationListView(generics.ListAPIView):
         return Notification.objects.filter(recipient=self.request.user)
 
 
+# Unread count - returns number of unread notifications for badge display
 class UnreadCountView(APIView):
     permission_classes = [IsAuthenticated]
 
