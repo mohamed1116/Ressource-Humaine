@@ -534,7 +534,7 @@ class DocumentDownloadView(APIView):
 
         gen_doc = doc_req.generated_documents.order_by('-created_at').first()
 
-        # Auto-generate only if template still exists
+        # Auto-generate only if template still exists and request is in valid state
         if not gen_doc and doc_req.status in (
             DocumentRequest.Status.APPROVED,
             DocumentRequest.Status.GENERATED,
