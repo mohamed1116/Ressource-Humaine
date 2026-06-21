@@ -2,6 +2,8 @@ import uuid
 from django.db import models
 from apps.core.models import TimeStampedModel
 
+# Messaging system models: Conversation, Message, Attachment, Reaction, ReadReceipt
+
 
 class Conversation(TimeStampedModel):
     class ConvType(models.TextChoices):
