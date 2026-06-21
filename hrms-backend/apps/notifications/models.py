@@ -1,7 +1,8 @@
 from django.db import models
 from apps.core.models import TimeStampedModel
 
-# Notification system: real-time alerts with type-based routing and preferences
+# Notification system: real-time alerts with type-based routing and user preferences
+# Supports broadcast, targeted and event-driven notifications
 
 
 class Notification(TimeStampedModel):
