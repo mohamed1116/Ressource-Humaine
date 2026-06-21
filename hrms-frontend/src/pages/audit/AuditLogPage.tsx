@@ -4,9 +4,6 @@
  */
 import { useEffect, useState } from 'react';
 import { getAuditLogs } from '../../api/audit.api';
-import Pagination from '../../components/ui/Pagination';
-
-const PER_PAGE = 20;
 
 const actionCfg: Record<string, { label: string; cls: string }> = {
   CREATE: { label: 'Creation', cls: 'bg-blue-50 text-blue-700' },
@@ -23,18 +20,12 @@ export default function AuditLogPage() {
   const [logs, setLogs] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
-  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    setLoading(true);
-    setPage(1);
-    const params: Record<string, string> = { page_size: '500' };
+    const params: Record<string, string> = {};
     if (filter) params.action = filter;
     getAuditLogs(params).then(r => setLogs(r.data.results || r.data)).catch(() => {}).finally(() => setLoading(false));
   }, [filter]);
-
-  const totalPages = Math.ceil(logs.length / PER_PAGE);
-  const rows = logs.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   return (
     <div>
@@ -55,7 +46,6 @@ export default function AuditLogPage() {
         ) : logs.length === 0 ? (
           <div className="p-10 text-center text-sm text-gray-500">Aucune entree de journal.</div>
         ) : (
-          <>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/80">
@@ -67,7 +57,7 @@ export default function AuditLogPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((log) => {
+              {logs.map((log) => {
                 const a = actionCfg[log.action as string] || { label: log.action, cls: 'bg-gray-50 text-gray-500' };
                 return (
                   <tr key={log.id as string} className="border-b border-gray-50 hover:bg-gray-50/50">
@@ -81,8 +71,6 @@ export default function AuditLogPage() {
               })}
             </tbody>
           </table>
-          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
-          </>
         )}
       </div>
     </div>

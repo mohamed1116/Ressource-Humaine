@@ -18,16 +18,6 @@ export const bulkGeneratePayslips = (data: { year: number; month: number; depart
 export const confirmPayslip = (id: string) =>
   api.post(`/payroll/payslips/${id}/confirm/`);
 
-export const markAsPaid = (id: string) =>
-  api.post(`/payroll/payslips/${id}/mark-paid/`);
-
-export const assignSalaryStructure = (data: {
-  employee_id: string;
-  structure_id: string;
-  base_salary_override?: number | null;
-  effective_date?: string;
-}) => api.post('/payroll/employee-salaries/assign/', data);
-
 export const getSalaryStructures = () =>
   api.get('/payroll/structures/');
 

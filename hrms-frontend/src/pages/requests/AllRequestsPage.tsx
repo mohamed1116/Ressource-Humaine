@@ -29,20 +29,15 @@
  */
 import { useEffect, useState } from 'react';
 import { getAllRequests, reviewRequest } from '../../api/requests.api';
-import { downloadSignedDocument } from '../../api/certificates.api';
-import Pagination from '../../components/ui/Pagination';
-
-const PER_PAGE = 15;
 
 /**
  * Type badge configuration.
  * Each request type gets a distinct color so HR can quickly scan the table.
  */
 const typeCfg: Record<string, { label: string; cls: string }> = {
-  CERTIFICATE: { label: 'Attestation',    cls: 'bg-blue-50 text-blue-700 border-blue-200' },
-  FREE:        { label: 'Demande libre',  cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-  LEAVE:       { label: 'Conge',          cls: 'bg-purple-50 text-purple-700 border-purple-200' },
-  MISSION:     { label: 'Mission',        cls: 'bg-teal-50 text-teal-700 border-teal-200' },
+  CERTIFICATE: { label: 'Attestation', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+  LEAVE:       { label: 'Conge',       cls: 'bg-purple-50 text-purple-700 border-purple-200' },
+  MISSION:     { label: 'Mission',     cls: 'bg-teal-50 text-teal-700 border-teal-200' },
 };
 
 /**
@@ -70,25 +65,6 @@ export default function AllRequestsPage() {
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [reviewingId, setReviewingId] = useState<string | null>(null);
-  const [rejectModal, setRejectModal] = useState<{ id: string; type: string } | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-  const [noteDrawer, setNoteDrawer] = useState<{ subject: string; note: string; user: string; title: string; attachmentUrl?: string } | null>(null);
-  const [page, setPage] = useState(1);
-  const [downloadingSignedId, setDownloadingSignedId] = useState<string | null>(null);
-
-  const handleDownloadSigned = async (id: string, title: string) => {
-    setDownloadingSignedId(id);
-    try {
-      const res = await downloadSignedDocument(id);
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `signe_${title}_${id}.pdf`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } catch { alert('Document signé non disponible.'); }
-    finally { setDownloadingSignedId(null); }
-  };
 
   /**
    * Fetch requests from the backend whenever filters change.
@@ -99,17 +75,14 @@ export default function AllRequestsPage() {
     if (typeFilter) params.type = typeFilter;
     if (statusFilter) params.status = statusFilter;
     setLoading(true);
-    setPage(1);
     getAllRequests(params)
       .then((r) => setRequests(Array.isArray(r.data) ? r.data : []))
       .catch(() => {})
       .finally(() => setLoading(false));
   };
 
+  // Re-fetch when filters change
   useEffect(() => { fetchData(); }, [typeFilter, statusFilter]);
-
-  const totalPages = Math.ceil(requests.length / PER_PAGE);
-  const rows = requests.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   /**
    * Handle approve/reject action.
@@ -119,27 +92,24 @@ export default function AllRequestsPage() {
    *
    * After success, re-fetches the list to reflect the new status.
    */
-  const handleReview = async (id: string, type: string, action: 'approve' | 'reject', reason = '') => {
+  const handleReview = async (id: string, type: string, action: 'approve' | 'reject') => {
+    // If rejecting, ask for a reason
+    let reason = '';
+    if (action === 'reject') {
+      const input = prompt('Motif du rejet (optionnel) :');
+      if (input === null) return; // user cancelled the prompt
+      reason = input;
+    }
+
     setReviewingId(id);
     try {
       await reviewRequest({ id, type, action, reason });
-      fetchData();
+      fetchData(); // refresh the list
     } catch {
       alert('Erreur lors du traitement de la demande.');
     } finally {
       setReviewingId(null);
     }
-  };
-
-  const handleReject = (id: string, type: string) => {
-    setRejectModal({ id, type });
-    setRejectReason('');
-  };
-
-  const confirmReject = async () => {
-    if (!rejectModal) return;
-    await handleReview(rejectModal.id, rejectModal.type, 'reject', rejectReason);
-    setRejectModal(null);
   };
 
   return (
@@ -163,7 +133,6 @@ export default function AllRequestsPage() {
           {[
             { v: '', l: 'Tous types' },
             { v: 'CERTIFICATE', l: 'Attestations' },
-            { v: 'FREE', l: 'Demandes libres' },
             { v: 'LEAVE', l: 'Conges' },
             { v: 'MISSION', l: 'Missions' },
           ].map((f) => (
@@ -215,21 +184,19 @@ export default function AllRequestsPage() {
         ) : requests.length === 0 ? (
           <div className="p-10 text-center text-sm text-gray-500">Aucune demande trouvee.</div>
         ) : (
-          <>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/80">
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Type</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Demandeur</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Objet</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Note</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Date</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Statut</th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
+              {requests.map((r) => {
                 const t = typeCfg[r.type as string] || typeCfg.CERTIFICATE;
                 const s = statusCfg[r.status as string] || statusCfg.PENDING;
                 const isPending = r.status === 'PENDING';
@@ -254,44 +221,6 @@ export default function AllRequestsPage() {
                       {r.title as string}
                     </td>
 
-                    {/* Note */}
-                    <td className="px-4 py-3 max-w-[160px]">
-                      {(() => {
-                        const subject = r.subject as string;
-                        const note = r.note as string;
-                        const attachmentUrl = r.attachment_url as string;
-                        const full = [subject, note].filter(Boolean).join(' — ');
-                        return (
-                          <div className="flex flex-col gap-1">
-                            {full ? (
-                              <button
-                                onClick={() => setNoteDrawer({ subject, note, user: r.user_name as string, title: r.title as string, attachmentUrl: attachmentUrl || undefined })}
-                                className="flex items-center gap-1 text-left group w-full"
-                              >
-                                <svg className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                </svg>
-                                <span className="text-xs text-gray-600 truncate group-hover:text-[#0f172a]">{full}</span>
-                              </button>
-                            ) : <span className="text-gray-300 text-xs">—</span>}
-                            {attachmentUrl && (
-                              <a
-                                href={attachmentUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
-                              >
-                                <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                                </svg>
-                                Pièce jointe
-                              </a>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </td>
-
                     {/* Creation date */}
                     <td className="px-4 py-3 text-gray-500">
                       {(r.created_at as string)?.slice(0, 10)}
@@ -304,129 +233,36 @@ export default function AllRequestsPage() {
                       </span>
                     </td>
 
-                    {/* Action buttons */}
+                    {/* Action buttons (only for pending requests) */}
                     <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-1.5 flex-wrap">
-                        {/* Signed document button — shown when prof has signed */}
-                        {r.type === 'CERTIFICATE' && r.has_signed_document && (
+                      {isPending ? (
+                        <div className="flex justify-end gap-1.5">
                           <button
-                            onClick={() => handleDownloadSigned(r.id as string, r.title as string)}
-                            disabled={downloadingSignedId === (r.id as string)}
-                            title="Télécharger le document signé par le professeur"
-                            className="px-2.5 py-1 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 disabled:opacity-50 transition-colors flex items-center gap-1"
+                            onClick={() => handleReview(r.id as string, r.type as string, 'approve')}
+                            disabled={isReviewing}
+                            className="px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded hover:bg-green-100 disabled:opacity-50 transition-colors"
                           >
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                            {downloadingSignedId === (r.id as string) ? '...' : 'Doc. signé'}
+                            {isReviewing ? '...' : 'Approuver'}
                           </button>
-                        )}
-                        {isPending ? (
-                          <>
-                            <button
-                              onClick={() => handleReview(r.id as string, r.type as string, 'approve')}
-                              disabled={isReviewing}
-                              className="px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded hover:bg-green-100 disabled:opacity-50 transition-colors"
-                            >
-                              {isReviewing ? '...' : 'Approuver'}
-                            </button>
-                            <button
-                              onClick={() => handleReject(r.id as string, r.type as string)}
-                              disabled={isReviewing}
-                              className="px-2.5 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 disabled:opacity-50 transition-colors"
-                            >
-                              {isReviewing ? '...' : 'Rejeter'}
-                            </button>
-                          </>
-                        ) : (
-                          !r.has_signed_document && <span className="text-xs text-gray-300">&mdash;</span>
-                        )}
-                      </div>
+                          <button
+                            onClick={() => handleReview(r.id as string, r.type as string, 'reject')}
+                            disabled={isReviewing}
+                            className="px-2.5 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 disabled:opacity-50 transition-colors"
+                          >
+                            {isReviewing ? '...' : 'Rejeter'}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-300">&mdash;</span>
+                      )}
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
-          </>
         )}
       </div>
-
-      {/* Reject Modal */}
-      {rejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
-            <h3 className="text-sm font-semibold text-gray-900 mb-1">Motif du rejet</h3>
-            <p className="text-xs text-gray-500 mb-3">Optionnel - sera visible par le demandeur</p>
-            <textarea
-              value={rejectReason}
-              onChange={e => setRejectReason(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none resize-none focus:ring-1 focus:ring-red-400"
-              placeholder="Raison du rejet..."
-              autoFocus
-            />
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setRejectModal(null)} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Annuler</button>
-              <button onClick={confirmReject} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Confirmer le rejet</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Note Drawer */}
-      {noteDrawer && (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setNoteDrawer(null)} />
-          <div className="fixed right-0 top-0 h-full w-80 bg-white shadow-2xl z-50 flex flex-col border-l border-gray-200">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-[#0f172a]">
-              <div>
-                <p className="text-sm font-semibold text-white">Note de la demande</p>
-                <p className="text-xs text-slate-400 mt-0.5 truncate">{noteDrawer.user}</p>
-              </div>
-              <button onClick={() => setNoteDrawer(null)} className="text-slate-400 hover:text-white text-xl leading-none">×</button>
-            </div>
-            <div className="flex-1 p-5 overflow-y-auto space-y-4">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Document demandé</p>
-                <p className="text-sm font-medium text-gray-800">{noteDrawer.title}</p>
-              </div>
-              {noteDrawer.subject && (
-                <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Objet</p>
-                  <p className="text-sm text-gray-800 font-medium">{noteDrawer.subject}</p>
-                </div>
-              )}
-              {noteDrawer.note && (
-                <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Message</p>
-                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap bg-amber-50 border border-amber-100 rounded-lg p-3">{noteDrawer.note}</p>
-                </div>
-              )}
-              {noteDrawer.attachmentUrl && (
-                <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Pièce jointe</p>
-                  <a
-                    href={noteDrawer.attachmentUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-3 py-2 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Télécharger la pièce jointe
-                  </a>
-                </div>
-              )}
-              {!noteDrawer.subject && !noteDrawer.note && (
-                <p className="text-sm text-gray-400 text-center py-8">Aucune note</p>
-              )}
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }
