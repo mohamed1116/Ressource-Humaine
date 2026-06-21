@@ -129,6 +129,7 @@ class ChangePasswordView(APIView):
         return Response({'detail': 'Password changed successfully.'})
 
 
+# Password reset request - sends reset token via email (token returned in DEBUG mode)
 class PasswordResetRequestView(APIView):
     """POST /api/v1/auth/password-reset/ -- Sends email with reset token."""
     permission_classes = [AllowAny]
