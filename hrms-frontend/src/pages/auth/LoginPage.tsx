@@ -1,3 +1,4 @@
+// Login page - handles user authentication with email and password
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
