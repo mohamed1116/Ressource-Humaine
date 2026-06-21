@@ -166,6 +166,7 @@ class PasswordResetRequestView(APIView):
         return Response(response_data)
 
 
+# Password reset confirm - validates token and sets new password
 class PasswordResetConfirmView(APIView):
     """POST /api/v1/auth/password-reset/confirm/ -- Validates token, sets new password."""
     permission_classes = [AllowAny]
