@@ -8,6 +8,7 @@
  *  - Generate PDF
  *  - Download PDF
  */
+// Manage certificates page - HR admin review and approval interface
 import { useEffect, useState } from 'react';
 import {
   getDocumentRequests, reviewDocumentRequest,
