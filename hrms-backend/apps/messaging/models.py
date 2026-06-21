@@ -4,6 +4,8 @@ from apps.core.models import TimeStampedModel
 
 # Messaging system models: Conversation, Message, Attachment, Reaction, ReadReceipt
 
+# Messaging system models: Conversation, Message, Attachment, Reaction, ReadReceipt
+
 
 class Conversation(TimeStampedModel):
     class ConvType(models.TextChoices):
