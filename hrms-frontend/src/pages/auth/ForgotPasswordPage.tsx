@@ -2,6 +2,7 @@
  * Forgot Password Page
  * User enters email to receive a password reset link.
  */
+// Forgot password page - sends reset link to user email
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { forgotPassword } from '../../api/auth.api';
