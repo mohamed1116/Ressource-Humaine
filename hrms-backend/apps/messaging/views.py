@@ -169,6 +169,7 @@ class MessageListCreateView(generics.ListCreateAPIView):
         MessageRead.objects.get_or_create(message=msg, user=self.request.user)
 
 
+# Message delete/edit - soft delete or edit own messages
 class MessageDeleteView(APIView):
     permission_classes = [IsAuthenticated]
 
