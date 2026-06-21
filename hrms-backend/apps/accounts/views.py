@@ -226,6 +226,7 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
         return UserSerializer
 
 
+# Admin password reset - Super Admin resets any user password
 class UserPasswordResetView(APIView):
     """POST /api/v1/auth/users/<uuid>/reset-password/ -- Super Admin resets user password."""
     permission_classes = [IsSuperAdmin]
