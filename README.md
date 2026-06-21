@@ -98,6 +98,7 @@ npm run dev
 - 🏆 Promotion and evaluation management
 - 🗂️ Full audit logging of all actions
 - 🌐 Multi-language support (French & Arabic documents)
+- 📊 Reports and statistics dashboard
 
 ---
 
