@@ -1,4 +1,5 @@
-# Standard pagination configuration for all API endpoints
+# Standard pagination configuration - 20 items per page by default
+# Override with ?page_size= query parameter
 from rest_framework.pagination import PageNumberPagination
 
 
