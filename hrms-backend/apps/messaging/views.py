@@ -252,6 +252,7 @@ class UserSearchView(APIView):
         return Response(UserMiniSerializer(users, many=True, context={'request': request}).data)
 
 
+# Find or create direct conversation - returns existing or creates new 1-on-1 chat
 class FindOrCreateDirectView(APIView):
     permission_classes = [IsNotStudent]
 
