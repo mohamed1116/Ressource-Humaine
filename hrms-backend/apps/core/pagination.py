@@ -1,3 +1,4 @@
+# Standard pagination configuration for all API endpoints
 from rest_framework.pagination import PageNumberPagination
 
 
