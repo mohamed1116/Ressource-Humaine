@@ -1,5 +1,5 @@
 from rest_framework import serializers
-# Serializers for authentication and user management
+# Serializers for authentication and user management - JWT, registration, profile
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 
