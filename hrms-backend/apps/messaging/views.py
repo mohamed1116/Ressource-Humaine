@@ -198,6 +198,7 @@ class MessageDeleteView(APIView):
             return Response({'detail': 'Non trouvé.'}, status=404)
 
 
+# Message reaction - toggle emoji reactions on messages
 class MessageReactionView(APIView):
     permission_classes = [IsAuthenticated]
 
