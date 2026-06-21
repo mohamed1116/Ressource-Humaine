@@ -101,6 +101,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization - French locale, Moroccan timezone
 LANGUAGE_CODE = 'fr'
+# Moroccan timezone (UTC+1) for all datetime operations
 TIME_ZONE = 'Africa/Casablanca'
 USE_I18N = True
 USE_TZ = True
