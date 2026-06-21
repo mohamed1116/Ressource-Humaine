@@ -1,3 +1,4 @@
+// Messaging page - real-time internal communication interface
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
