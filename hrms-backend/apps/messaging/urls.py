@@ -1,4 +1,4 @@
-# URL routing for messaging system endpoints
+# URL routing for messaging system - conversations, messages, reactions
 from django.urls import path
 from . import views
 
