@@ -100,6 +100,7 @@ class ConversationDetailView(generics.RetrieveUpdateAPIView):
         return Response(ConversationSerializer(conv, context={'request': request}).data)
 
 
+# Message list and create - marks messages as read on fetch, supports file attachments
 class MessageListCreateView(generics.ListCreateAPIView):
     serializer_class   = MessageSerializer
     permission_classes = [IsNotStudent]
