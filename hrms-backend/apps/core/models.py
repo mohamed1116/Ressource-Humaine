@@ -1,5 +1,6 @@
 import uuid
-# Core abstract models shared across all apps
+# Core abstract models shared across all HRMS apps
+# TimeStampedModel provides created_at and updated_at fields
 from django.db import models
 
 
