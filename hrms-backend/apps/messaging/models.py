@@ -3,6 +3,7 @@ from django.db import models
 from apps.core.models import TimeStampedModel
 
 # Messaging system models: Conversation, Message, Attachment, Reaction, ReadReceipt
+# Supports direct and group conversations with file attachments
 
 # Messaging system models: Conversation, Message, Attachment, Reaction, ReadReceipt
 
