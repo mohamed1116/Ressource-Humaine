@@ -7,6 +7,7 @@ For more information on this file, see
 https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/
 """
 
+# ASGI configuration for HRMS async deployment
 import os
 
 from django.core.asgi import get_asgi_application
