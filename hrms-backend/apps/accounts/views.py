@@ -92,6 +92,7 @@ class LogoutView(APIView):
             return Response({'detail': 'Invalid token.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# Token refresh endpoint - extends SimpleJWT default view
 class TokenRefreshView(JWTTokenRefreshView):
     """POST /api/v1/auth/token/refresh/"""
     pass
