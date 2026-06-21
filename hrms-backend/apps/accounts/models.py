@@ -55,6 +55,7 @@ class User(AbstractUser):
         return self.role == self.Role.PROFESSOR
 
 
+# Token model for secure password reset flow with expiry
 class PasswordResetToken(TimeStampedModel):
     """Tracks password reset tokens with expiry."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reset_tokens')
