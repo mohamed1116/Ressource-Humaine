@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from apps.core.models import TimeStampedModel
 
-# Custom User model extending Django's AbstractUser with role-based access
+# Custom User model extending Django's AbstractUser with role-based access control
 
 
 class User(AbstractUser):
