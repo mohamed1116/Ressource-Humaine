@@ -98,6 +98,7 @@ class TokenRefreshView(JWTTokenRefreshView):
     pass
 
 
+# Profile view - allows authenticated users to view and update their own profile
 class ProfileView(generics.RetrieveUpdateAPIView):
     """GET/PATCH /api/v1/auth/profile/ -- Current user's own profile."""
     serializer_class = UserSerializer
