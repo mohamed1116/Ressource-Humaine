@@ -2,6 +2,7 @@
  * My Documents Page
  * Shows the current user's document requests with status and download links.
  */
+// My certificates page - user view for their document requests
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getDocumentRequests, downloadDocument } from '../../api/certificates.api';
