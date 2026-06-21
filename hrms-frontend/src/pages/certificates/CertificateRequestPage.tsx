@@ -5,6 +5,7 @@
  * The page dynamically shows manual fields based on the chosen template's
  * variable definitions (type: "manual"). Auto fields are filled from user data.
  */
+// Certificate request page - submit new document requests
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
