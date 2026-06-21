@@ -1,4 +1,5 @@
 # Custom DRF permission classes for role-based access control
+# Usage: permission_classes = [IsAdminHR] or [IsSuperAdmin]
 from rest_framework.permissions import BasePermission
 
 
