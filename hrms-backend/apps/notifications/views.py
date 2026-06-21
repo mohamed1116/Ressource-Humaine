@@ -110,6 +110,7 @@ class NotificationDeleteView(generics.DestroyAPIView):
         return Notification.objects.filter(recipient=self.request.user)
 
 
+# Notification preferences - get or update per-user notification settings
 class NotificationPreferenceView(generics.RetrieveUpdateAPIView):
     serializer_class = NotificationPreferenceSerializer
     permission_classes = [IsAuthenticated]
