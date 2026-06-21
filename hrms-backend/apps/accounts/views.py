@@ -194,6 +194,7 @@ class PasswordResetConfirmView(APIView):
         return Response({'detail': 'Password has been reset successfully.'})
 
 
+# User list view - Super Admin only endpoint for listing all users
 class UserListView(generics.ListAPIView):
     """GET /api/v1/auth/users/ -- Super Admin only user listing."""
     queryset = User.objects.all().order_by('-created_at')
