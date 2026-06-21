@@ -1,3 +1,4 @@
+// Notifications page - displays and manages user notifications
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
