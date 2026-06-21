@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from apps.core.models import TimeStampedModel
 
+# Custom User model extending Django's AbstractUser with role-based access
+
 
 class User(AbstractUser):
     """Custom User model. Email is the login identifier."""
