@@ -24,6 +24,12 @@ ALLOWED_MIME = {
 }
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
+# -------------------------------------------------------
+# Messaging System Views
+# Supports direct messages, group conversations,
+# file attachments, reactions, and read receipts
+# -------------------------------------------------------
+
 
 class IsNotStudent(BasePermission):
     def has_permission(self, request, view):
@@ -102,7 +108,7 @@ class MessageListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         conv = self.get_conversation()
-        # Mark as read
+        # Mark all unread messages as read when user opens the conversation
         unread = conv.messages.filter(is_deleted=False).exclude(sender=self.request.user)
         already_read = MessageRead.objects.filter(
             user=self.request.user, message__in=unread
@@ -155,6 +161,7 @@ class MessageListCreateView(generics.ListCreateAPIView):
                 uploaded_by=self.request.user,
             )
 
+        # Update conversation timestamp after new message
         Conversation.objects.filter(id=conv.id).update(updated_at=timezone.now())
         MessageRead.objects.get_or_create(message=msg, user=self.request.user)
 

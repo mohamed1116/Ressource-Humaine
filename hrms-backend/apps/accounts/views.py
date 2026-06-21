@@ -25,6 +25,11 @@ from .serializers import (
 
 User = get_user_model()
 
+# -------------------------------------------------------
+# Authentication & User Management Views
+# Handles login, logout, registration, password reset
+# and full user CRUD for Super Admin
+# -------------------------------------------------------
 
 class RegisterView(generics.CreateAPIView):
     """POST /api/v1/auth/register/ -- Admin-only user creation."""
@@ -63,6 +68,7 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
+        # Generate JWT tokens for the authenticated user
         refresh = RefreshToken.for_user(user)
         return Response({
             'access': str(refresh.access_token),
@@ -259,6 +265,7 @@ class UserBulkImportView(APIView):
             )
 
         created, errors = [], []
+        # Process each row starting from row 2 (skip header)
         for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
             data = {headers[i]: (str(v).strip() if v is not None else '') for i, v in enumerate(row)}
             if not data.get('email') or not data.get('username'):

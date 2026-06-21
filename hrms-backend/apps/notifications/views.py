@@ -13,6 +13,11 @@ from .services import NotificationService
 
 User = get_user_model()
 
+# -------------------------------------------------------
+# Notification System Views
+# Handles broadcast, listing, read/unread tracking
+# and per-user notification preferences
+# -------------------------------------------------------
 
 class AdminBroadcastView(APIView):
     """POST /notifications/broadcast/ -- Admin sends notification with optional file attachment."""
@@ -40,6 +45,7 @@ class AdminBroadcastView(APIView):
             recipients = User.objects.filter(is_active=True)
 
         count = 0
+        # Create a notification for each recipient
         for user in recipients:
             Notification.objects.create(
                 recipient=user,
@@ -87,6 +93,7 @@ class MarkAllReadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        # Mark all unread notifications as read in a single DB query
         updated = Notification.objects.filter(
             recipient=request.user, is_read=False,
         ).update(is_read=True, read_at=timezone.now())
