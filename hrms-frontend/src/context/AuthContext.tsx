@@ -1,3 +1,4 @@
+// Auth context - manages user session, login/logout state across the app
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { User } from '../types/auth.types';
 import * as authApi from '../api/auth.api';
