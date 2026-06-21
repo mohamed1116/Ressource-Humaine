@@ -1,3 +1,4 @@
+# Serializers for the internal messaging system
 from rest_framework import serializers
 from apps.accounts.models import User
 from .models import Conversation, ConversationParticipant, Message, Attachment, MessageRead, MessageReaction
