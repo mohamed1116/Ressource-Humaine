@@ -1,3 +1,4 @@
+// User management page - super admin CRUD operations on users
 import { useState, useMemo, useEffect, useRef } from "react";
 import { getUsers, createUser, updateUser, deleteUser, resetUserPassword } from "../../api/users.api";
 import api from "../../api/axiosInstance";
