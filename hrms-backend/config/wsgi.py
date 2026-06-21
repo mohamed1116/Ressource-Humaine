@@ -7,6 +7,7 @@ For more information on this file, see
 https://docs.djangoproject.com/en/6.0/howto/deployment/wsgi/
 """
 
+# WSGI configuration for HRMS deployment
 import os
 
 from django.core.wsgi import get_wsgi_application
