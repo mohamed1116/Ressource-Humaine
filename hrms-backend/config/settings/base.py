@@ -99,7 +99,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
+# Internationalization - French locale, Moroccan timezone
 LANGUAGE_CODE = 'fr'
 TIME_ZONE = 'Africa/Casablanca'
 USE_I18N = True
