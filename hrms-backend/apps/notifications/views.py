@@ -93,6 +93,7 @@ class MarkAsReadView(APIView):
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
+# Mark all read - bulk marks all notifications as read in one request
 class MarkAllReadView(APIView):
     permission_classes = [IsAuthenticated]
 
