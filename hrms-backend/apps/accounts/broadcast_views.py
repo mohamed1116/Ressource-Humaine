@@ -2,6 +2,7 @@
 Broadcast Notifications API
 Allows Super Admin to send notifications to all users or specific roles
 """
+# Broadcast views - system-wide notification broadcasting
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
