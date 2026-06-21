@@ -34,6 +34,7 @@ class Conversation(TimeStampedModel):
         return self.messages.filter(is_deleted=False).order_by('-created_at').first()
 
 
+# Through model for conversation participants with membership metadata
 class ConversationParticipant(models.Model):
     conversation  = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='memberships')
     user          = models.ForeignKey('accounts.User', on_delete=models.CASCADE, related_name='memberships')
