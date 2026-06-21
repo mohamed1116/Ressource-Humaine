@@ -19,6 +19,7 @@ User = get_user_model()
 # and per-user notification preferences
 # -------------------------------------------------------
 
+# Admin broadcast - sends notification to all users, specific roles or specific users
 class AdminBroadcastView(APIView):
     """POST /notifications/broadcast/ -- Admin sends notification with optional file attachment."""
     permission_classes = [IsAdminHR]
