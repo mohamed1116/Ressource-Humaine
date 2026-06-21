@@ -1,4 +1,5 @@
 import uuid
+# Core abstract models shared across all apps
 from django.db import models
 
 
