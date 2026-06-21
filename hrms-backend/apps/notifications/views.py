@@ -102,6 +102,7 @@ class MarkAllReadView(APIView):
         return Response({'marked_read': updated})
 
 
+# Delete notification - removes a notification for the authenticated user
 class NotificationDeleteView(generics.DestroyAPIView):
     permission_classes = [IsAuthenticated]
 
