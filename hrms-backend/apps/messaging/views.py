@@ -69,6 +69,7 @@ class ConversationListCreateView(generics.ListCreateAPIView):
         return ctx
 
 
+# Conversation detail - retrieve, archive/unarchive, pin/mute per user
 class ConversationDetailView(generics.RetrieveUpdateAPIView):
     serializer_class   = ConversationSerializer
     permission_classes = [IsNotStudent]
