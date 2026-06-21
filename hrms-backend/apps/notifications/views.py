@@ -76,6 +76,7 @@ class UnreadCountView(APIView):
         return Response({'unread_count': count})
 
 
+# Mark as read - marks a single notification as read
 class MarkAsReadView(APIView):
     permission_classes = [IsAuthenticated]
 
